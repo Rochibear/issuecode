@@ -1,6 +1,8 @@
 # IssueCode 自訂題庫範例
 
 ## Q: 修改 SP 時應使用哪個指令？
+groupId: E
+variantId: E-1
 type: choice
 category: SQL
 difficulty: Easy
@@ -11,6 +13,8 @@ hint: 不需要先移除既有 SP。
 explanation: 使用 ALTER 修改既有 Stored Procedure，避免 DROP + CREATE 帶來額外風險。
 
 ## Q: Flag 11 的意義
+groupId: C
+variantId: C-2
 type: fill
 category: 核心邏輯
 difficulty: Medium
@@ -20,6 +24,8 @@ hint: 它出現在 OverlapCardlog 檢查後。
 explanation: 查到申請時段已有重疊資料時，會回傳 Flag 11。
 
 ## Q: 追查方法
+groupId: A
+variantId: A-4
 type: concept
 category: 方法論
 difficulty: Hard

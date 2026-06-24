@@ -25,8 +25,10 @@ python -m http.server 4173
 ## 功能
 
 - 選擇、填空、是非與概念題
+- 同一知識點可建立多種題型變體，每次只隨機抽一種
 - 測驗前設定提示與偷看答案次數
 - 每題計分、總分、作答時間與暱稱紀錄
+- 結果頁並列作答與參考答案，概念題以異色關鍵字顯示命中／缺漏
 - 挑戰紀錄與自訂題庫保存在瀏覽器 `localStorage`
 - 支援結構化 Markdown 與 JSON 題庫匯入
 
@@ -35,6 +37,8 @@ python -m http.server 4173
 ## 題庫匯入
 
 Markdown 格式可參考 `sample-questions.md`。每題以 `## Q:` 開頭，`type` 支援：
+
+使用相同 `groupId` 可將數題歸為同一知識點；每次測驗只會從該群組隨機抽一題。`variantId` 用來顯示 A-1、A-2 等題型編號。
 
 - `choice`：`options` 以 `|` 分隔，`answer` 為從 0 開始的選項索引。
 - `fill`：`answer` 可用 `|` 提供多個可接受答案。

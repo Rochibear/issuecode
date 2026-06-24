@@ -38,6 +38,20 @@
     return [...window.DEFAULT_QUESTIONS, ...state.customQuestions];
   }
 
+  function groupedQuestions(questions = allQuestions()) {
+    const groups = new Map();
+    questions.forEach((question) => {
+      const key = question.groupId || question.id;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(question);
+    });
+    return [...groups.entries()].map(([id, variants]) => ({ id, variants }));
+  }
+
+  function selectSessionQuestions() {
+    return shuffle(groupedQuestions().map((group) => shuffle(group.variants)[0]));
+  }
+
   function escapeHtml(value) {
     return String(value ?? "")
       .replaceAll("&", "&amp;")
@@ -126,6 +140,7 @@
 
   function renderHome() {
     const questions = allQuestions();
+    const groups = groupedQuestions(questions);
     const history = loadJson(STORAGE.history, []);
     const savedName = localStorage.getItem(STORAGE.nickname) || "";
     app.innerHTML = `
@@ -141,7 +156,7 @@
                 <h2>開始本次挑戰</h2>
                 <p>先設定求助額度。使用提示會折分，偷看答案則該題不計分。</p>
               </div>
-              <span class="count-badge">${questions.length} QUESTIONS</span>
+              <span class="count-badge">${groups.length} TOPICS / ${questions.length} VARIANTS</span>
             </div>
 
             <div class="form-group">
@@ -155,7 +170,7 @@
             </div>
 
             <div class="start-row">
-              <div class="score-note"><strong>計分規則</strong><br>每題 10 分 · 概念題按關鍵概念覆蓋率計分</div>
+              <div class="score-note"><strong>隨機規則</strong><br>每個知識點只抽一種題型 · 本次共 ${groups.length} 題</div>
               <button class="primary-btn" data-action="start">開始挑戰 →</button>
             </div>
           </section>
@@ -187,7 +202,7 @@
       return;
     }
     localStorage.setItem(STORAGE.nickname, nickname);
-    const questions = shuffle(allQuestions());
+    const questions = selectSessionQuestions();
     state.session = {
       nickname,
       questions,
@@ -245,7 +260,7 @@
         <div class="quiz-layout">
           <aside class="quiz-sidebar">
             <div class="sidebar-head">Question map</div>
-            <div class="question-map">${session.questions.map((_, index) => `<button class="question-dot ${index === session.index ? "current" : ""} ${session.answers[index].score !== null ? "done" : ""}" aria-label="第 ${index + 1} 題">${String(index + 1).padStart(2, "0")}</button>`).join("")}</div>
+            <div class="question-map">${session.questions.map((item, index) => `<button class="question-dot ${index === session.index ? "current" : ""} ${session.answers[index].score !== null ? "done" : ""}" aria-label="第 ${index + 1} 題">${escapeHtml(item.groupId || String(index + 1).padStart(2, "0"))}</button>`).join("")}</div>
             <div class="sidebar-summary">完成目前題目後才會前進。<br>答案送出後無法返回修改。</div>
           </aside>
 
@@ -254,7 +269,7 @@
               <span class="difficulty ${question.difficulty.toLowerCase()}">${escapeHtml(question.difficulty)}</span>
               <span class="question-type">${TYPE_LABELS[question.type]}</span>
               <span class="question-type">${escapeHtml(question.category || "一般")}</span>
-              <span class="question-number">ISSUE-${String(session.index + 1).padStart(3, "0")}</span>
+              <span class="question-number">${escapeHtml(question.variantId || `ISSUE-${String(session.index + 1).padStart(3, "0")}`)}</span>
             </div>
             <h1>${escapeHtml(question.title)}</h1>
             <p class="question-prompt">${escapeHtml(question.prompt)}</p>
@@ -335,8 +350,46 @@
   function getAnswerLabel(question) {
     if (question.type === "choice") return question.options[question.answer];
     if (question.type === "boolean") return question.answer ? "正確" : "錯誤";
-    if (question.type === "fill") return question.answers[0];
+    if (question.type === "fill") return question.answers.join("／");
     return question.modelAnswer;
+  }
+
+  function getUserAnswerLabel(question, value) {
+    if (question.type === "choice") return question.options[value] ?? "未作答";
+    if (question.type === "boolean") return value ? "正確" : "錯誤";
+    return String(value || "未作答");
+  }
+
+  function getKeywordResults(question, value) {
+    if (question.type !== "concept") return [];
+    const input = normalizeText(value);
+    return question.keywords.map((group) => ({
+      label: group.join(" / "),
+      matched: group.some((keyword) => input.includes(normalizeText(keyword)))
+    }));
+  }
+
+  function renderReviewDetails(question, answer) {
+    const keywords = getKeywordResults(question, answer.value);
+    return `
+      <div class="review-detail">
+        <div class="answer-compare">
+          <div class="answer-block">
+            <span>你的答案</span>
+            <p class="answer-value ${answer.correct ? "correct" : "incorrect"}">${escapeHtml(getUserAnswerLabel(question, answer.value))}</p>
+          </div>
+          <div class="answer-block">
+            <span>參考答案</span>
+            <p class="answer-value reference">${escapeHtml(getAnswerLabel(question))}</p>
+          </div>
+        </div>
+        ${keywords.length ? `
+          <div class="keyword-review">
+            <span class="keyword-title">關鍵字命中 ${keywords.filter((item) => item.matched).length} / ${keywords.length}</span>
+            <div class="keyword-list">${keywords.map((item) => `<span class="keyword-chip ${item.matched ? "matched" : "missed"}">${item.matched ? "✓" : "×"} ${escapeHtml(item.label)}</span>`).join("")}</div>
+          </div>` : ""}
+        <p class="review-explanation"><strong>解析</strong>${escapeHtml(question.explanation)}</p>
+      </div>`;
   }
 
   function collectAnswer(question) {
@@ -452,9 +505,12 @@
           ${session.questions.map((question, index) => {
             const answer = session.answers[index];
             return `<div class="review-item">
-              <span class="review-status ${answer.correct ? "pass" : ""}">${answer.correct ? "✓" : "×"}</span>
-              <div><strong>${escapeHtml(question.title)}</strong><small>參考：${escapeHtml(getAnswerLabel(question))}${answer.peeked ? " · 已偷看" : answer.hintsUsed ? ` · 使用 ${answer.hintsUsed} 次提示` : ""}</small></div>
-              <span class="review-points">${answer.score} / 10</span>
+              <div class="review-summary">
+                <span class="review-status ${answer.correct ? "pass" : ""}">${answer.correct ? "✓" : "×"}</span>
+                <div><strong>${escapeHtml(question.variantId || question.id)} · ${escapeHtml(question.title)}</strong><small>${TYPE_LABELS[question.type]}${answer.peeked ? " · 已偷看" : answer.hintsUsed ? ` · 使用 ${answer.hintsUsed} 次提示` : ""}</small></div>
+                <span class="review-points">${answer.score} / 10</span>
+              </div>
+              ${renderReviewDetails(question, answer)}
             </div>`;
           }).join("")}
         </div>
@@ -480,6 +536,7 @@
 
   function renderLibrary() {
     const questions = allQuestions();
+    const groups = groupedQuestions(questions);
     const counts = Object.keys(TYPE_LABELS).reduce((result, type) => {
       result[type] = questions.filter((question) => question.type === type).length;
       return result;
@@ -492,13 +549,15 @@
         </div>
         <div class="library-grid">
           <section class="panel library-panel">
-            <div class="panel-header"><div><h2>題型分布</h2><p>目前共 ${questions.length} 題，其中 ${state.customQuestions.length} 題為自行匯入。</p></div><span class="count-badge">${questions.length} TOTAL</span></div>
+            <div class="panel-header"><div><h2>題型變體</h2><p>${questions.length} 個題型變體，分屬 ${groups.length} 個知識點；每次每組只抽一題。</p></div><span class="count-badge">${groups.length} TOPICS</span></div>
             <div class="type-stats">
               ${Object.entries(TYPE_LABELS).map(([type, label]) => `<div class="stat-card"><strong>${counts[type]}</strong><span>${label}</span></div>`).join("")}
             </div>
             <details class="format-guide">
               <summary>查看 Markdown 題庫格式</summary>
               <pre>## Q: SP 修正方式
+groupId: E
+variantId: E-1
 type: choice
 category: SQL
 difficulty: Medium
@@ -517,7 +576,7 @@ answer: 10 | Flag 10</pre>
               <div>
                 <span class="import-icon">＋Q</span>
                 <strong>匯入新的題目</strong>
-                <p>支援結構化 Markdown 與 JSON。JSON 可使用單一題目或題目陣列。</p>
+                <p>支援結構化 Markdown 與 JSON。相同 groupId 的題目視為同一知識點，每次只隨機抽一種題型。</p>
                 <button class="primary-btn" data-action="import">選擇 .md / .json</button>
               </div>
             </div>
@@ -539,6 +598,8 @@ answer: 10 | Flag 10</pre>
       const type = fields.type || "choice";
       const question = {
         id: `import-md-${Date.now()}-${index}`,
+        groupId: fields.groupid || "",
+        variantId: fields.variantid || "",
         type,
         title,
         prompt: fields.prompt || title,
@@ -573,6 +634,7 @@ answer: 10 | Flag 10</pre>
     if (question.type === "boolean" && typeof question.answer !== "boolean") throw new Error(`${prefix}答案必須是 true/false`);
     if (question.type === "concept" && (!Array.isArray(question.keywords) || !question.keywords.length || !question.modelAnswer)) throw new Error(`${prefix}缺少 keywords 或 modelAnswer`);
     question.id ||= `import-${Date.now()}-${index}`;
+    question.variantId ||= question.id;
     if (question.type === "choice") question.answer = Number(question.answer);
     if (question.type === "concept") question.keywords = question.keywords.map((group) => Array.isArray(group) ? group : [group]);
     question.category ||= "匯入題庫";
