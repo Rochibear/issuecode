@@ -2,6 +2,8 @@
 
 以實際 Issue 復盤內容製作的離線測驗 Web 小程式。
 
+線上版本：<https://rochibear.github.io/issuecode/>
+
 ## 執行
 
 可直接開啟 `index.html`，或在此目錄啟動任一靜態檔案伺服器：
