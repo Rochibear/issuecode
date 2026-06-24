@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0d0f12" />
+    <title>IssueCode｜把問題復盤練成直覺</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <button class="brand" data-action="home" aria-label="回到首頁">
+          <span class="brand-mark" aria-hidden="true">IC</span>
+          <span>
+            <strong>IssueCode</strong>
+            <small>Debug Practice Lab</small>
+          </span>
+        </button>
+        <nav class="topnav" aria-label="主要導覽">
+          <button class="nav-item active" data-view="home">練習</button>
+          <button class="nav-item" data-view="history">紀錄</button>
+          <button class="nav-item" data-view="library">題庫</button>
+        </nav>
+        <div class="topbar-meta">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>LOCAL MODE</span>
+        </div>
+      </header>
+
+      <main id="app" tabindex="-1"></main>
+    </div>
+
+    <div id="toast-region" class="toast-region" aria-live="polite"></div>
+    <input id="question-import" type="file" accept=".md,.markdown,.json,application/json,text/markdown" hidden />
+
+    <script src="questions.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
