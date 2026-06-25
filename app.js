@@ -175,7 +175,8 @@
   }
 
   function syncLanguageSwitches() {
-    document.querySelectorAll("[data-language-switch]").forEach((switcher) => {
+    const switches = [...new Set([...document.querySelectorAll("#language-switch, [data-language-switch]")])];
+    switches.forEach((switcher) => {
       const isLarge = switcher.classList.contains("large");
       switcher.innerHTML = LANGUAGES.map((item) => `
         <button type="button" class="${state.language === item.id ? "active" : ""}" data-language="${item.id}" aria-pressed="${state.language === item.id}">
