@@ -4,14 +4,35 @@
   const STORAGE = {
     questions: "issuecode.customQuestions.v1",
     history: "issuecode.history.v1",
-    nickname: "issuecode.nickname.v1"
+    nickname: "issuecode.nickname.v1",
+    language: "issuecode.language.v1"
   };
 
+  const LANGUAGES = [
+    { id: "zh", label: "中文" },
+    { id: "en", label: "EN" },
+    { id: "both", label: "中英" }
+  ];
+
   const TYPE_LABELS = {
-    choice: "選擇題",
-    fill: "填空題",
-    boolean: "是非題",
-    concept: "概念題"
+    choice: { zh: "選擇題", en: "Multiple choice" },
+    fill: { zh: "填空題", en: "Fill in the blank" },
+    boolean: { zh: "是非題", en: "True / False" },
+    concept: { zh: "概念題", en: "Concept" }
+  };
+
+  const BOOL_LABELS = {
+    correct: { zh: "正確", en: "True" },
+    incorrect: { zh: "錯誤", en: "False" }
+  };
+
+  const FALLBACK_TEXT = {
+    importedCategory: { zh: "匯入題庫", en: "Imported" },
+    importedHint: { zh: "回到題目中的關鍵名詞思考。", en: "Start from the key terms in the question." },
+    importedExplanation: { zh: "此題由外部題庫匯入。", en: "This question was imported from an external file." },
+    modelAnswer: { zh: "請依課程內容回答。", en: "Answer according to the training material." },
+    answerPlaceholder: { zh: "輸入答案", en: "Type your answer" },
+    noAnswer: { zh: "未作答", en: "No answer" }
   };
 
   const app = document.querySelector("#app");
@@ -20,10 +41,49 @@
     view: "home",
     hintLimit: 3,
     peekLimit: 1,
+    language: normalizeLanguage(localStorage.getItem(STORAGE.language) || "both"),
     customQuestions: loadJson(STORAGE.questions, []),
     session: null,
     timerId: null
   };
+
+  function normalizeLanguage(value) {
+    return LANGUAGES.some((item) => item.id === value) ? value : "both";
+  }
+
+  function activeLanguage() {
+    return state.language === "en" ? "en" : "zh";
+  }
+
+  function isI18n(value) {
+    return value && typeof value === "object" && !Array.isArray(value);
+  }
+
+  function textOf(value, lang = activeLanguage()) {
+    if (isI18n(value)) return String(value[lang] ?? value.zh ?? value.en ?? "");
+    return String(value ?? "");
+  }
+
+  function plainText(value, lang = activeLanguage()) {
+    return textOf(value, lang);
+  }
+
+  function renderText(value, className = "") {
+    if (state.language === "both" && isI18n(value)) {
+      const zh = textOf(value, "zh");
+      const en = textOf(value, "en");
+      if (zh && en && zh !== en) {
+        return `<span class="bi-text ${className}"><span>${escapeHtml(zh)}</span><small>${escapeHtml(en)}</small></span>`;
+      }
+    }
+    return escapeHtml(plainText(value));
+  }
+
+  function textCandidates(value) {
+    if (Array.isArray(value)) return value.flatMap(textCandidates);
+    if (isI18n(value)) return [value.zh, value.en].filter(Boolean).map(String);
+    return [value].filter((item) => item !== null && item !== undefined && item !== "").map(String);
+  }
 
   function loadJson(key, fallback) {
     try {
@@ -62,7 +122,11 @@
   }
 
   function normalizeText(value) {
-    return String(value ?? "").trim().toLocaleLowerCase("zh-Hant").replace(/\s+/g, " ");
+    return String(value ?? "")
+      .trim()
+      .toLocaleLowerCase("zh-Hant")
+      .replace(/[，。；、/|]+/g, " ")
+      .replace(/\s+/g, " ");
   }
 
   function formatTime(seconds) {
@@ -72,7 +136,8 @@
   }
 
   function formatDate(iso) {
-    return new Intl.DateTimeFormat("zh-TW", {
+    const locale = state.language === "en" ? "en-US" : "zh-TW";
+    return new Intl.DateTimeFormat(locale, {
       month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false
     }).format(new Date(iso));
   }
@@ -90,9 +155,31 @@
     const region = document.querySelector("#toast-region");
     const node = document.createElement("div");
     node.className = `toast ${kind}`;
-    node.textContent = message;
+    node.textContent = plainText(message);
     region.append(node);
     setTimeout(() => node.remove(), 3200);
+  }
+
+  function renderChrome() {
+    document.documentElement.lang = state.language === "en" ? "en" : "zh-Hant";
+    document.title = plainText({ zh: "IssueCode｜把問題復盤練成直覺", en: "IssueCode | Debug Practice Lab" });
+    document.querySelector(".brand")?.setAttribute("aria-label", plainText({ zh: "回到首頁", en: "Back to home" }));
+    const brandSmall = document.querySelector(".brand small");
+    if (brandSmall) brandSmall.textContent = plainText({ zh: "Debug Practice Lab", en: "Debug Practice Lab" });
+    const nav = document.querySelector(".topnav");
+    nav?.setAttribute("aria-label", plainText({ zh: "主要導覽", en: "Main navigation" }));
+    document.querySelector('[data-view="home"]').textContent = plainText({ zh: "首頁", en: "Home" });
+    document.querySelector('[data-view="history"]').textContent = plainText({ zh: "紀錄", en: "Records" });
+    document.querySelector('[data-view="library"]').textContent = plainText({ zh: "題庫", en: "Library" });
+    const switcher = document.querySelector("#language-switch");
+    if (switcher) {
+      switcher.innerHTML = LANGUAGES.map((item) => `
+        <button type="button" class="${state.language === item.id ? "active" : ""}" data-language="${item.id}" aria-pressed="${state.language === item.id}">
+          ${escapeHtml(item.label)}
+        </button>`).join("");
+    }
+    const localMode = document.querySelector("#local-mode-label");
+    if (localMode) localMode.textContent = plainText({ zh: "LOCAL MODE", en: "LOCAL MODE" });
   }
 
   function setActiveNav(view) {
@@ -103,7 +190,11 @@
 
   function navigate(view) {
     if (state.session && !state.session.completed && view !== "quiz") {
-      if (!window.confirm("目前測驗尚未完成，離開後本次進度不會保留。確定離開？")) return;
+      const ok = window.confirm(plainText({
+        zh: "離開測驗會中止目前作答，確定要離開嗎？",
+        en: "Leaving will stop the current quiz. Continue?"
+      }));
+      if (!ok) return;
       stopTimer();
       state.session = null;
     }
@@ -114,6 +205,7 @@
   }
 
   function render() {
+    renderChrome();
     if (state.view === "home") renderHome();
     if (state.view === "quiz") renderQuiz();
     if (state.view === "results") renderResults();
@@ -126,14 +218,14 @@
     return `
       <div class="allowance-card">
         <div class="allowance-top">
-          <span class="allowance-title">${label}</span>
+          <span class="allowance-title">${renderText(label)}</span>
           <div class="stepper" data-key="${key}">
-            <button type="button" data-step="-1" aria-label="減少${label}">−</button>
+            <button type="button" data-step="-1" aria-label="${escapeHtml(plainText({ zh: `減少${textOf(label, "zh")}`, en: `Decrease ${textOf(label, "en")}` }))}">−</button>
             <output>${value}</output>
-            <button type="button" data-step="1" aria-label="增加${label}">＋</button>
+            <button type="button" data-step="1" aria-label="${escapeHtml(plainText({ zh: `增加${textOf(label, "zh")}`, en: `Increase ${textOf(label, "en")}` }))}">＋</button>
           </div>
         </div>
-        <p>${description} 可設定 ${min}–${max} 次。</p>
+        <p>${renderText(description)} ${escapeHtml(plainText({ zh: `可設定 ${min}～${max} 次。`, en: `Range: ${min}-${max}.` }))}</p>
       </div>
     `;
   }
@@ -146,50 +238,56 @@
     app.innerHTML = `
       <section class="page">
         <p class="eyebrow">Issue-driven learning / 01</p>
-        <h1 class="hero-title">不是背答案，<br><span>是練出追問題的路徑。</span></h1>
-        <p class="hero-copy">以「漏刷卡事後期限」Issue 為題材，從畫面一路追到 Stored Procedure。每次練習會打亂題目，留下分數、時間與暱稱。</p>
+        <h1 class="hero-title">${renderText({ zh: "IssueCode", en: "IssueCode" })}<br><span>${renderText({ zh: "把問題復盤練成直覺", en: "Turn reviews into debugging instinct" })}</span></h1>
+        <p class="hero-copy">${renderText({
+          zh: "以 Issue 為題材，從畫面一路追到 Stored Procedure。每次練習會打亂題目，留下分數、時間與暱稱。",
+          en: "Practice with an issue case, tracing from the screen down to the Stored Procedure. Each run shuffles questions and stores score, time, and nickname locally."
+        })}</p>
 
         <div class="home-grid">
           <section class="panel setup-panel">
             <div class="panel-header">
               <div>
-                <h2>開始本次挑戰</h2>
-                <p>先設定求助額度。使用提示會折分，偷看答案則該題不計分。</p>
+                <h2>${renderText({ zh: "開始練習設定", en: "Practice setup" })}</h2>
+                <p>${renderText({
+                  zh: "先設定提示與偷看答案的次數；提示會降低該題最高分，偷看答案該題為 0 分。",
+                  en: "Set hint and peek limits first. Hints cap that question at 8 points; peeking makes it 0 points."
+                })}</p>
               </div>
               <span class="count-badge">${groups.length} TOPICS / ${questions.length} VARIANTS</span>
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="nickname">挑戰者暱稱</label>
-              <input id="nickname" class="text-input" maxlength="20" autocomplete="nickname" placeholder="例如：Dana" value="${escapeHtml(savedName)}" />
+              <label class="form-label" for="nickname">${renderText({ zh: "練習暱稱", en: "Nickname" })}</label>
+              <input id="nickname" class="text-input" maxlength="20" autocomplete="nickname" placeholder="${escapeHtml(plainText({ zh: "例如：Dana", en: "e.g. Dana" }))}" value="${escapeHtml(savedName)}" />
             </div>
 
             <div class="allowance-grid">
-              ${renderAllowance("hint", "提示次數", "每使用一次，該題最高 8 分。", state.hintLimit, 0, 9)}
-              ${renderAllowance("peek", "偷看答案", "偷看後該題最高分為 0。", state.peekLimit, 0, 5)}
+              ${renderAllowance("hint", { zh: "提示次數", en: "Hints" }, { zh: "每次提示會揭露方向，該題最高 8 分。", en: "Each hint reveals direction and caps that question at 8 points." }, state.hintLimit, 0, 9)}
+              ${renderAllowance("peek", { zh: "偷看答案", en: "Peek answer" }, { zh: "直接看參考答案，該題不計分。", en: "Show the reference answer; that question earns 0 points." }, state.peekLimit, 0, 5)}
             </div>
 
             <div class="start-row">
-              <div class="score-note"><strong>隨機規則</strong><br>每個知識點只抽一種題型 · 本次共 ${groups.length} 題</div>
-              <button class="primary-btn" data-action="start">開始挑戰 →</button>
+              <div class="score-note"><strong>${renderText({ zh: "隨機規則", en: "Random rule" })}</strong><br>${renderText({ zh: `每個知識點只抽一種題型，本次共 ${groups.length} 題。`, en: `One variant per topic. This run has ${groups.length} questions.` })}</div>
+              <button class="primary-btn" data-action="start">${renderText({ zh: "開始練習 →", en: "Start practice →" })}</button>
             </div>
           </section>
 
           <aside class="panel brief-panel">
             <div class="brief-head">
               <span>CASE BRIEF / #2026-06</span>
-              <h3>漏刷卡事後申請期限<br>未扣除例假日</h3>
+              <h3>${renderText({ zh: "從畫面症狀追到資料來源", en: "Trace the symptom to the data source" })}</h3>
             </div>
             <ol class="brief-list">
-              <li><span class="brief-number">01</span><div><strong>定位入口</strong><small>Network 找 RagneChange 與 CheckInfo</small></div></li>
-              <li><span class="brief-number">02</span><div><strong>沿呼叫鏈下鑽</strong><small>Web → API → Service → VB → SP</small></div></li>
-              <li><span class="brief-number">03</span><div><strong>驗證根因</strong><small>HumanlyUtility_5 漏讀 item=0</small></div></li>
-              <li><span class="brief-number">04</span><div><strong>控制修正風險</strong><small>最小 UNION、UAT、回歸與回滾</small></div></li>
+              <li><span class="brief-number">01</span><div><strong>${renderText({ zh: "重現與取證", en: "Reproduce and capture" })}</strong><small>Network · RagneChange · CheckInfo</small></div></li>
+              <li><span class="brief-number">02</span><div><strong>${renderText({ zh: "沿呼叫鏈下鑽", en: "Follow the call chain" })}</strong><small>Web · API · Service · VB · SP</small></div></li>
+              <li><span class="brief-number">03</span><div><strong>${renderText({ zh: "定位根因", en: "Locate root cause" })}</strong><small>HumanlyUtility_5 · item=0</small></div></li>
+              <li><span class="brief-number">04</span><div><strong>${renderText({ zh: "最小修正與驗證", en: "Minimal fix and validation" })}</strong><small>UNION · UAT · rollback</small></div></li>
             </ol>
             <div class="tag-row"><span class="tag">C#</span><span class="tag">VB.NET</span><span class="tag">SQL</span><span class="tag">ROOT CAUSE</span></div>
           </aside>
         </div>
-        ${history.length ? `<p class="score-note" style="margin-top:18px">本機已有 ${history.length} 筆挑戰紀錄。資料不會上傳。</p>` : ""}
+        ${history.length ? `<p class="score-note" style="margin-top:18px">${renderText({ zh: `本機已有 ${history.length} 筆練習紀錄。`, en: `${history.length} local practice records are stored.` })}</p>` : ""}
       </section>
     `;
   }
@@ -197,7 +295,7 @@
   function startQuiz() {
     const nickname = document.querySelector("#nickname")?.value.trim();
     if (!nickname) {
-      toast("請先輸入挑戰者暱稱。", "error");
+      toast({ zh: "請先輸入練習暱稱。", en: "Enter a nickname first." }, "error");
       document.querySelector("#nickname")?.focus();
       return;
     }
@@ -247,59 +345,59 @@
     const question = currentQuestion();
     const answer = session.answers[session.index];
     const progress = (session.index / session.questions.length) * 100;
-    const hintText = answer.hintsUsed ? question.hints.slice(0, answer.hintsUsed).join("\n") : "";
-    const peekText = answer.peeked ? getAnswerLabel(question) : "";
+    const hintHtml = answer.hintsUsed ? question.hints.slice(0, answer.hintsUsed).map((hint) => renderText(hint)).join("<br>") : "";
+    const peekHtml = answer.peeked ? renderAnswerLabel(question) : "";
 
     app.innerHTML = `
       <section class="quiz-page">
         <div class="quiz-status">
           <div id="timer" class="timer">${formatTime(session.elapsed)}</div>
-          <div class="progress-track" aria-label="測驗進度"><div class="progress-fill" style="width:${progress}%"></div></div>
+          <div class="progress-track" aria-label="${escapeHtml(plainText({ zh: "測驗進度", en: "Quiz progress" }))}"><div class="progress-fill" style="width:${progress}%"></div></div>
           <div class="question-count">${session.index + 1} / ${session.questions.length}</div>
         </div>
         <div class="quiz-layout">
           <aside class="quiz-sidebar">
             <div class="sidebar-head">Question map</div>
-            <div class="question-map">${session.questions.map((item, index) => `<button class="question-dot ${index === session.index ? "current" : ""} ${session.answers[index].score !== null ? "done" : ""}" aria-label="第 ${index + 1} 題">${escapeHtml(item.groupId || String(index + 1).padStart(2, "0"))}</button>`).join("")}</div>
-            <div class="sidebar-summary">完成目前題目後才會前進。<br>答案送出後無法返回修改。</div>
+            <div class="question-map">${session.questions.map((item, index) => `<button class="question-dot ${index === session.index ? "current" : ""} ${session.answers[index].score !== null ? "done" : ""}" aria-label="${escapeHtml(plainText({ zh: `第 ${index + 1} 題`, en: `Question ${index + 1}` }))}">${escapeHtml(item.groupId || String(index + 1).padStart(2, "0"))}</button>`).join("")}</div>
+            <div class="sidebar-summary">${renderText({ zh: "每組只出一種題型；同一知識點不會在同次練習重複出現。", en: "Only one variant is selected per topic in a single run." })}</div>
           </aside>
 
           <article class="question-card">
             <div class="question-meta">
-              <span class="difficulty ${question.difficulty.toLowerCase()}">${escapeHtml(question.difficulty)}</span>
-              <span class="question-type">${TYPE_LABELS[question.type]}</span>
-              <span class="question-type">${escapeHtml(question.category || "一般")}</span>
+              <span class="difficulty ${String(question.difficulty || "Medium").toLowerCase()}">${escapeHtml(question.difficulty || "Medium")}</span>
+              <span class="question-type">${renderText(TYPE_LABELS[question.type])}</span>
+              <span class="question-type">${renderText(question.category || FALLBACK_TEXT.importedCategory)}</span>
               <span class="question-number">${escapeHtml(question.variantId || `ISSUE-${String(session.index + 1).padStart(3, "0")}`)}</span>
             </div>
-            <h1>${escapeHtml(question.title)}</h1>
-            <p class="question-prompt">${escapeHtml(question.prompt)}</p>
+            <h1>${renderText(question.title)}</h1>
+            <p class="question-prompt">${renderText(question.prompt)}</p>
             <div class="answer-zone">${renderAnswerControl(question, answer)}</div>
-            ${hintText ? `<div class="hint-box"><strong>提示</strong><br>${escapeHtml(hintText).replaceAll("\n", "<br>")}</div>` : ""}
-            ${peekText ? `<div class="peek-box"><strong>參考答案</strong><br>${escapeHtml(peekText)}</div>` : ""}
+            ${hintHtml ? `<div class="hint-box"><strong>${renderText({ zh: "提示", en: "Hint" })}</strong><br>${hintHtml}</div>` : ""}
+            ${peekHtml ? `<div class="peek-box"><strong>${renderText({ zh: "參考答案", en: "Reference answer" })}</strong><br>${peekHtml}</div>` : ""}
             <div class="question-footer">
               <span class="keyboard-note">SELECT / TYPE YOUR ANSWER</span>
-              <button class="primary-btn" data-action="submit-answer">送出答案 →</button>
+              <button class="primary-btn" data-action="submit-answer">${renderText({ zh: "送出答案 →", en: "Submit answer →" })}</button>
             </div>
           </article>
 
           <aside class="quiz-tools">
             <div class="tools-head">Assistance</div>
             <div class="tool-card">
-              <div class="tool-top"><strong>提示</strong><span class="tool-count">${session.hintsRemaining} LEFT</span></div>
-              <p>逐步揭露線索。該題使用後最高 8 分。</p>
-              <button class="secondary-btn" data-action="hint" ${session.hintsRemaining <= 0 || answer.hintsUsed >= question.hints.length ? "disabled" : ""}>取得提示</button>
+              <div class="tool-top"><strong>${renderText({ zh: "提示", en: "Hint" })}</strong><span class="tool-count">${session.hintsRemaining} LEFT</span></div>
+              <p>${renderText({ zh: "提供下一步方向；使用後該題最高 8 分。", en: "Reveal the next direction; max score becomes 8." })}</p>
+              <button class="secondary-btn" data-action="hint" ${session.hintsRemaining <= 0 || answer.hintsUsed >= question.hints.length ? "disabled" : ""}>${renderText({ zh: "取得提示", en: "Get hint" })}</button>
             </div>
             <div class="tool-card">
-              <div class="tool-top"><strong>偷看答案</strong><span class="tool-count">${session.peeksRemaining} LEFT</span></div>
-              <p>直接顯示參考答案，該題不再計分。</p>
-              <button class="ghost-btn" data-action="peek" ${session.peeksRemaining <= 0 || answer.peeked ? "disabled" : ""}>顯示答案</button>
+              <div class="tool-top"><strong>${renderText({ zh: "偷看答案", en: "Peek answer" })}</strong><span class="tool-count">${session.peeksRemaining} LEFT</span></div>
+              <p>${renderText({ zh: "直接顯示參考答案，該題不再計分。", en: "Show the reference answer; this question earns 0 points." })}</p>
+              <button class="ghost-btn" data-action="peek" ${session.peeksRemaining <= 0 || answer.peeked ? "disabled" : ""}>${renderText({ zh: "顯示答案", en: "Show answer" })}</button>
             </div>
             <div class="tool-card">
-              <div class="tool-top"><strong>本次規則</strong></div>
+              <div class="tool-top"><strong>${renderText({ zh: "計分規則", en: "Scoring" })}</strong></div>
               <div class="score-rule">
-                <div class="rule-row"><span>完整答對</span><strong>10 pts</strong></div>
-                <div class="rule-row"><span>使用提示</span><strong>max 8</strong></div>
-                <div class="rule-row"><span>偷看答案</span><strong>0 pts</strong></div>
+                <div class="rule-row"><span>${renderText({ zh: "完整答對", en: "Correct" })}</span><strong>10 pts</strong></div>
+                <div class="rule-row"><span>${renderText({ zh: "使用提示", en: "With hint" })}</span><strong>max 8</strong></div>
+                <div class="rule-row"><span>${renderText({ zh: "偷看答案", en: "Peeked" })}</span><strong>0 pts</strong></div>
               </div>
             </div>
           </aside>
@@ -313,19 +411,19 @@
         <label class="choice-option">
           <input type="radio" name="answer" value="${index}" ${String(answer.value) === String(index) ? "checked" : ""} />
           <span class="option-key">${String.fromCharCode(65 + index)}</span>
-          <span>${escapeHtml(option)}</span>
+          <span>${renderText(option)}</span>
         </label>`).join("")}</div>`;
     }
     if (question.type === "boolean") {
       return `<div class="boolean-grid">
-        <label class="choice-option"><input type="radio" name="answer" value="true" ${answer.value === true ? "checked" : ""} /><span class="option-key">O</span><span>正確</span></label>
-        <label class="choice-option"><input type="radio" name="answer" value="false" ${answer.value === false ? "checked" : ""} /><span class="option-key">X</span><span>錯誤</span></label>
+        <label class="choice-option"><input type="radio" name="answer" value="true" ${answer.value === true ? "checked" : ""} /><span class="option-key">O</span><span>${renderText(BOOL_LABELS.correct)}</span></label>
+        <label class="choice-option"><input type="radio" name="answer" value="false" ${answer.value === false ? "checked" : ""} /><span class="option-key">X</span><span>${renderText(BOOL_LABELS.incorrect)}</span></label>
       </div>`;
     }
     if (question.type === "concept") {
-      return `<textarea class="answer-input" id="text-answer" placeholder="${escapeHtml(question.placeholder || "輸入答案")}">${escapeHtml(answer.value || "")}</textarea>`;
+      return `<textarea class="answer-input" id="text-answer" placeholder="${escapeHtml(plainText(question.placeholder || FALLBACK_TEXT.answerPlaceholder))}">${escapeHtml(answer.value || "")}</textarea>`;
     }
-    return `<input class="answer-input" id="text-answer" placeholder="${escapeHtml(question.placeholder || "輸入答案")}" value="${escapeHtml(answer.value || "")}" />`;
+    return `<input class="answer-input" id="text-answer" placeholder="${escapeHtml(plainText(question.placeholder || FALLBACK_TEXT.answerPlaceholder))}" value="${escapeHtml(answer.value || "")}" />`;
   }
 
   function useHint() {
@@ -347,26 +445,38 @@
     renderQuiz();
   }
 
-  function getAnswerLabel(question) {
+  function answerValue(question) {
     if (question.type === "choice") return question.options[question.answer];
-    if (question.type === "boolean") return question.answer ? "正確" : "錯誤";
-    if (question.type === "fill") return question.answers.join("／");
+    if (question.type === "boolean") return question.answer ? BOOL_LABELS.correct : BOOL_LABELS.incorrect;
+    if (question.type === "fill") return {
+      zh: question.answers.map((item) => textOf(item, "zh")).join("／"),
+      en: question.answers.map((item) => textOf(item, "en")).join(" / ")
+    };
     return question.modelAnswer;
   }
 
-  function getUserAnswerLabel(question, value) {
-    if (question.type === "choice") return question.options[value] ?? "未作答";
-    if (question.type === "boolean") return value ? "正確" : "錯誤";
-    return String(value || "未作答");
+  function renderAnswerLabel(question) {
+    return renderText(answerValue(question));
+  }
+
+  function renderUserAnswerLabel(question, value, correct) {
+    let label = value;
+    if (question.type === "choice") label = question.options[value] ?? FALLBACK_TEXT.noAnswer;
+    if (question.type === "boolean") label = value === true ? BOOL_LABELS.correct : value === false ? BOOL_LABELS.incorrect : FALLBACK_TEXT.noAnswer;
+    const content = question.type === "choice" || question.type === "boolean" ? renderText(label) : escapeHtml(String(label || plainText(FALLBACK_TEXT.noAnswer)));
+    return `<p class="answer-value ${correct ? "correct" : "incorrect"}">${content}</p>`;
   }
 
   function getKeywordResults(question, value) {
     if (question.type !== "concept") return [];
     const input = normalizeText(value);
-    return question.keywords.map((group) => ({
-      label: group.join(" / "),
-      matched: group.some((keyword) => input.includes(normalizeText(keyword)))
-    }));
+    return question.keywords.map((group) => {
+      const terms = textCandidates(group);
+      return {
+        label: unique(terms).join(" / "),
+        matched: terms.some((keyword) => input.includes(normalizeText(keyword)))
+      };
+    });
   }
 
   function renderReviewDetails(question, answer) {
@@ -375,20 +485,20 @@
       <div class="review-detail">
         <div class="answer-compare">
           <div class="answer-block">
-            <span>你的答案</span>
-            <p class="answer-value ${answer.correct ? "correct" : "incorrect"}">${escapeHtml(getUserAnswerLabel(question, answer.value))}</p>
+            <span>${renderText({ zh: "你的答案", en: "Your answer" })}</span>
+            ${renderUserAnswerLabel(question, answer.value, answer.correct)}
           </div>
           <div class="answer-block">
-            <span>參考答案</span>
-            <p class="answer-value reference">${escapeHtml(getAnswerLabel(question))}</p>
+            <span>${renderText({ zh: "參考答案", en: "Reference answer" })}</span>
+            <p class="answer-value reference">${renderAnswerLabel(question)}</p>
           </div>
         </div>
         ${keywords.length ? `
           <div class="keyword-review">
-            <span class="keyword-title">關鍵字命中 ${keywords.filter((item) => item.matched).length} / ${keywords.length}</span>
+            <span class="keyword-title">${renderText({ zh: "關鍵字命中", en: "Keyword hits" })} ${keywords.filter((item) => item.matched).length} / ${keywords.length}</span>
             <div class="keyword-list">${keywords.map((item) => `<span class="keyword-chip ${item.matched ? "matched" : "missed"}">${item.matched ? "✓" : "×"} ${escapeHtml(item.label)}</span>`).join("")}</div>
           </div>` : ""}
-        <p class="review-explanation"><strong>解析</strong>${escapeHtml(question.explanation)}</p>
+        <p class="review-explanation"><strong>${renderText({ zh: "解析", en: "Explanation" })}</strong>${renderText(question.explanation)}</p>
       </div>`;
   }
 
@@ -404,16 +514,27 @@
     return document.querySelector("#text-answer")?.value.trim() || null;
   }
 
+  function fillMatches(question, value) {
+    const input = normalizeText(value);
+    return question.answers.some((candidate) => {
+      return textCandidates(candidate).some((accepted) => {
+        const normalized = normalizeText(accepted);
+        if (!normalized) return false;
+        if (question.caseSensitive) return String(value).trim() === String(accepted).trim();
+        return input === normalized || input.includes(normalized);
+      });
+    });
+  }
+
   function grade(question, value, answerState) {
     let ratio = 0;
     if (question.type === "choice" || question.type === "boolean") {
       ratio = value === question.answer ? 1 : 0;
     } else if (question.type === "fill") {
-      const input = question.caseSensitive ? String(value).trim() : normalizeText(value);
-      ratio = question.answers.some((candidate) => (question.caseSensitive ? String(candidate).trim() : normalizeText(candidate)) === input) ? 1 : 0;
+      ratio = fillMatches(question, value) ? 1 : 0;
     } else if (question.type === "concept") {
       const input = normalizeText(value);
-      const hits = question.keywords.filter((group) => group.some((keyword) => input.includes(normalizeText(keyword)))).length;
+      const hits = question.keywords.filter((group) => textCandidates(group).some((keyword) => input.includes(normalizeText(keyword)))).length;
       ratio = hits / question.keywords.length;
     }
     const maxScore = answerState.peeked ? 0 : answerState.hintsUsed > 0 ? 8 : 10;
@@ -426,7 +547,7 @@
     const answerState = session.answers[session.index];
     const value = collectAnswer(question);
     if (value === null || value === "") {
-      toast("請先作答再送出。", "error");
+      toast({ zh: "請先作答再送出。", en: "Answer before submitting." }, "error");
       return;
     }
     answerState.value = value;
@@ -474,7 +595,11 @@
     if (!session?.completed) return navigate("home");
     const record = session.record;
     const correctCount = session.answers.filter((item) => item.correct).length;
-    const headline = record.percentage >= 85 ? "根因已鎖定。" : record.percentage >= 60 ? "呼叫鏈已接上。" : "還有幾個斷點待補。";
+    const headline = record.percentage >= 85
+      ? { zh: "根因判讀穩定", en: "Root-cause reading is solid" }
+      : record.percentage >= 60
+        ? { zh: "方向正確，還能補強", en: "Good direction, still improvable" }
+        : { zh: "建議重跑一次呼叫鏈", en: "Run the call chain again" };
     app.innerHTML = `
       <section class="page">
         <p class="eyebrow">Challenge complete</p>
@@ -483,8 +608,8 @@
             <div class="score-value"><strong>${record.percentage}</strong><span>${record.score} / ${record.max} PTS</span></div>
           </div>
           <div class="result-copy">
-            <h1>${headline}</h1>
-            <p>${escapeHtml(record.nickname)}，本次完成 ${record.questionCount} 題，${correctCount} 題達到通過標準。概念題以關鍵概念覆蓋率計分。</p>
+            <h1>${renderText(headline)}</h1>
+            <p>${escapeHtml(record.nickname)}，${renderText({ zh: `本次完成 ${record.questionCount} 題，${correctCount} 題達到通過標準。概念題以關鍵概念覆蓋率計分。`, en: `you completed ${record.questionCount} questions. ${correctCount} met the passing threshold. Concept questions are scored by keyword coverage.` })}</p>
             <div class="result-meta">
               <span class="meta-pill">TIME ${formatTime(record.elapsed)}</span>
               <span class="meta-pill">HINT ${record.hintsUsed}</span>
@@ -492,22 +617,27 @@
               <span class="meta-pill">${formatDate(record.completedAt)}</span>
             </div>
             <div class="result-actions">
-              <button class="primary-btn" data-action="retry">再挑戰一次</button>
-              <button class="secondary-btn" data-action="history">查看紀錄</button>
+              <button class="primary-btn" data-action="retry">${renderText({ zh: "再練一次", en: "Practice again" })}</button>
+              <button class="secondary-btn" data-action="history">${renderText({ zh: "查看紀錄", en: "View records" })}</button>
             </div>
           </div>
         </div>
 
         <div class="section-heading" style="margin-top:38px">
-          <div><h1>逐題結果</h1><p>偷看答案的題目固定為 0 分；提示題最高 8 分。</p></div>
+          <div><h1>${renderText({ zh: "作答回顧", en: "Answer review" })}</h1><p>${renderText({ zh: "會顯示你填了什麼、錯在哪裡，以及概念題命中或缺漏的關鍵字。", en: "Shows what you answered, what went wrong, and matched or missed keywords for concept questions." })}</p></div>
         </div>
         <div class="review-list">
           ${session.questions.map((question, index) => {
             const answer = session.answers[index];
+            const assist = answer.peeked
+              ? plainText({ zh: "已偷看", en: "Peeked" })
+              : answer.hintsUsed
+                ? plainText({ zh: `使用 ${answer.hintsUsed} 次提示`, en: `${answer.hintsUsed} hint(s)` })
+                : "";
             return `<div class="review-item">
               <div class="review-summary">
                 <span class="review-status ${answer.correct ? "pass" : ""}">${answer.correct ? "✓" : "×"}</span>
-                <div><strong>${escapeHtml(question.variantId || question.id)} · ${escapeHtml(question.title)}</strong><small>${TYPE_LABELS[question.type]}${answer.peeked ? " · 已偷看" : answer.hintsUsed ? ` · 使用 ${answer.hintsUsed} 次提示` : ""}</small></div>
+                <div><strong>${escapeHtml(question.variantId || question.id)} · ${renderText(question.title)}</strong><small>${renderText(TYPE_LABELS[question.type])}${assist ? ` · ${escapeHtml(assist)}` : ""}</small></div>
                 <span class="review-points">${answer.score} / 10</span>
               </div>
               ${renderReviewDetails(question, answer)}
@@ -522,15 +652,15 @@
     app.innerHTML = `
       <section class="page">
         <div class="section-heading">
-          <div><p class="eyebrow">Local records</p><h1>挑戰紀錄</h1><p>最多保留 50 筆，只存在這個瀏覽器。</p></div>
-          ${history.length ? '<button class="danger-btn" data-action="clear-history">清除紀錄</button>' : ""}
+          <div><p class="eyebrow">Local records</p><h1>${renderText({ zh: "練習紀錄", en: "Practice records" })}</h1><p>${renderText({ zh: "最多保留最近 50 筆，資料只存在這台瀏覽器。", en: "Keeps the latest 50 records in this browser only." })}</p></div>
+          ${history.length ? `<button class="danger-btn" data-action="clear-history">${renderText({ zh: "清除紀錄", en: "Clear records" })}</button>` : ""}
         </div>
         ${history.length ? `
           <div class="table-wrap"><table class="data-table">
-            <thead><tr><th>暱稱</th><th>分數</th><th>答題數</th><th>時間</th><th>提示 / 偷看</th><th>完成時間</th></tr></thead>
+            <thead><tr><th>${renderText({ zh: "暱稱", en: "Nickname" })}</th><th>${renderText({ zh: "分數", en: "Score" })}</th><th>${renderText({ zh: "題數", en: "Questions" })}</th><th>${renderText({ zh: "時間", en: "Time" })}</th><th>${renderText({ zh: "提示 / 偷看", en: "Hint / Peek" })}</th><th>${renderText({ zh: "完成時間", en: "Completed" })}</th></tr></thead>
             <tbody>${history.map((record) => `<tr><td><strong>${escapeHtml(record.nickname)}</strong></td><td>${record.percentage}%</td><td>${record.questionCount}</td><td>${formatTime(record.elapsed)}</td><td>${record.hintsUsed} / ${record.peeksUsed}</td><td>${formatDate(record.completedAt)}</td></tr>`).join("")}</tbody>
           </table></div>` : `
-          <div class="empty-state"><strong>還沒有挑戰紀錄</strong><p>完成第一次 Issue 測驗後，結果會出現在這裡。</p><button class="primary-btn" data-action="home">開始練習</button></div>`}
+          <div class="empty-state"><strong>${renderText({ zh: "還沒有紀錄", en: "No records yet" })}</strong><p>${renderText({ zh: "完成一次練習後，分數、時間與暱稱會顯示在這裡。", en: "After a run, score, time, and nickname will appear here." })}</p><button class="primary-btn" data-action="home">${renderText({ zh: "回首頁練習", en: "Back to practice" })}</button></div>`}
       </section>`;
   }
 
@@ -544,45 +674,100 @@
     app.innerHTML = `
       <section class="page">
         <div class="section-heading">
-          <div><p class="eyebrow">Question library</p><h1>題庫管理</h1><p>內建題庫不會被覆蓋；匯入的題目會追加並儲存在本機。</p></div>
-          ${state.customQuestions.length ? '<button class="danger-btn" data-action="clear-custom">移除匯入題目</button>' : ""}
+          <div><p class="eyebrow">Question library</p><h1>${renderText({ zh: "題庫管理", en: "Question library" })}</h1><p>${renderText({ zh: "內建題庫與匯入題庫會同時顯示；匯入資料保存在本機瀏覽器。", en: "Built-in and imported questions are shown together; imports are stored in this browser." })}</p></div>
+          ${state.customQuestions.length ? `<button class="danger-btn" data-action="clear-custom">${renderText({ zh: "清除匯入題庫", en: "Clear imports" })}</button>` : ""}
         </div>
         <div class="library-grid">
           <section class="panel library-panel">
-            <div class="panel-header"><div><h2>題型變體</h2><p>${questions.length} 個題型變體，分屬 ${groups.length} 個知識點；每次每組只抽一題。</p></div><span class="count-badge">${groups.length} TOPICS</span></div>
+            <div class="panel-header"><div><h2>${renderText({ zh: "題型變體", en: "Question variants" })}</h2><p>${renderText({ zh: `${questions.length} 個題型變體，分屬 ${groups.length} 個知識點；每次每組只抽一題。`, en: `${questions.length} variants across ${groups.length} topics; each run samples one variant per topic.` })}</p></div><span class="count-badge">${groups.length} TOPICS</span></div>
             <div class="type-stats">
-              ${Object.entries(TYPE_LABELS).map(([type, label]) => `<div class="stat-card"><strong>${counts[type]}</strong><span>${label}</span></div>`).join("")}
+              ${Object.entries(TYPE_LABELS).map(([type, label]) => `<div class="stat-card"><strong>${counts[type]}</strong><span>${renderText(label)}</span></div>`).join("")}
+            </div>
+            <div class="library-split">
+              ${renderQuestionInventory({ zh: "內建題庫（舊）", en: "Built-in library (base)" }, window.DEFAULT_QUESTIONS, { zh: "系統預設題目", en: "Default questions" })}
+              ${renderQuestionInventory({ zh: "匯入題庫（新）", en: "Imported library (new)" }, state.customQuestions, { zh: "尚未匯入新題目", en: "No imported questions yet" })}
             </div>
             <details class="format-guide">
-              <summary>查看 Markdown 題庫格式</summary>
-              <pre>## Q: SP 修正方式
+              <summary>${renderText({ zh: "查看 Markdown 題庫格式", en: "View Markdown question format" })}</summary>
+              <pre>## Q: SP 修正策略
+titleEn: Stored Procedure fix strategy
 groupId: E
-variantId: E-1
+variantId: E-5
 type: choice
 category: SQL
+categoryEn: SQL
 difficulty: Medium
-options: DROP 重建 | UNION 補 item=0 | 改資料 | 忽略
+prompt: 哪一種改法最小、最容易驗證？
+promptEn: Which change is smallest and easiest to verify?
+options: DROP 重建 | 用 UNION 補 item=0 | 改全部查詢 | 只改畫面
+optionsEn: Drop and recreate | Add item=0 with UNION | Change every query | UI only
 answer: 1
-hint: 選擇最小變更
-explanation: 只補漏讀的合法類別。
-
-## Q: 期限錯誤 Flag
-type: fill
-answer: 10 | Flag 10</pre>
+hint: 不要擴大資料語意。
+hintEn: Do not expand the data semantics.
+explanation: 只補漏掉的來源，風險最小。
+explanationEn: Add only the missing source to keep risk low.</pre>
             </details>
           </section>
           <section class="panel library-panel">
             <div class="import-zone">
               <div>
-                <span class="import-icon">＋Q</span>
-                <strong>匯入新的題目</strong>
-                <p>支援結構化 Markdown 與 JSON。相同 groupId 的題目視為同一知識點，每次只隨機抽一種題型。</p>
-                <button class="primary-btn" data-action="import">選擇 .md / .json</button>
+                <span class="import-icon">＋</span>
+                <strong>${renderText({ zh: "匯入新題庫", en: "Import questions" })}</strong>
+                <p>${renderText({ zh: "支援 Markdown 或 JSON。相同 groupId 代表同一知識點，每次練習只會隨機抽其中一種題型。舊格式純中文題庫也能匯入。", en: "Markdown and JSON are supported. The same groupId means one topic; each run samples one variant. Existing Chinese-only files still work." })}</p>
+                <button class="primary-btn" data-action="import">${renderText({ zh: "選擇 .md / .json", en: "Choose .md / .json" })}</button>
               </div>
             </div>
           </section>
         </div>
       </section>`;
+  }
+
+  function renderQuestionInventory(title, questions, emptyText) {
+    const groups = groupedQuestions(questions);
+    return `
+      <div class="source-box">
+        <div class="source-head">
+          <strong>${renderText(title)}</strong>
+          <span>${questions.length} ${plainText({ zh: "題", en: "items" })}</span>
+        </div>
+        ${questions.length ? `<div class="source-list">${groups.map((group) => {
+          const first = group.variants[0];
+          return `<div class="source-item">
+            <div><strong>${escapeHtml(group.id)} · ${renderText(first.groupTitle || first.title)}</strong><small>${group.variants.length} variants</small></div>
+            <div class="variant-list">${group.variants.map((question) => `<span>${escapeHtml(question.variantId || question.id)} · ${renderText(TYPE_LABELS[question.type])}</span>`).join("")}</div>
+          </div>`;
+        }).join("")}</div>` : `<p class="source-empty">${renderText(emptyText)}</p>`}
+      </div>`;
+  }
+
+  function bilingual(zh, en) {
+    const zhValue = String(zh || "").trim();
+    const enValue = String(en || "").trim();
+    if (enValue) return { zh: zhValue || enValue, en: enValue };
+    return zhValue;
+  }
+
+  function splitPipe(value) {
+    return String(value || "").split("|").map((item) => item.trim()).filter(Boolean);
+  }
+
+  function buildBilingualList(zhValue, enValue) {
+    const zhList = splitPipe(zhValue);
+    const enList = splitPipe(enValue);
+    const length = Math.max(zhList.length, enList.length);
+    if (!length) return [FALLBACK_TEXT.importedHint];
+    return Array.from({ length }, (_, index) => bilingual(zhList[index] || "", enList[index] || ""));
+  }
+
+  function mergeKeywordFields(zhValue, enValue) {
+    const zhGroups = splitPipe(zhValue).map((group) => group.split(",").map((item) => item.trim()).filter(Boolean));
+    const enGroups = splitPipe(enValue).map((group) => group.split(",").map((item) => item.trim()).filter(Boolean));
+    const length = Math.max(zhGroups.length, enGroups.length);
+    return Array.from({ length }, (_, index) => unique([...(zhGroups[index] || []), ...(enGroups[index] || [])])).filter((group) => group.length);
+  }
+
+  function parseBoolean(value) {
+    return ["true", "1", "yes", "y", "是", "正確", "true / correct"].includes(normalizeText(value));
   }
 
   function parseMarkdown(text) {
@@ -601,46 +786,48 @@ answer: 10 | Flag 10</pre>
         groupId: fields.groupid || "",
         variantId: fields.variantid || "",
         type,
-        title,
-        prompt: fields.prompt || title,
-        category: fields.category || "匯入題庫",
+        title: bilingual(title, fields.titleen),
+        prompt: bilingual(fields.prompt || title, fields.prompten || fields.titleen),
+        category: bilingual(fields.category || textOf(FALLBACK_TEXT.importedCategory, "zh"), fields.categoryen),
         difficulty: fields.difficulty || "Medium",
-        hints: fields.hint ? fields.hint.split("|").map((item) => item.trim()) : ["回到題目中的關鍵名詞思考。"],
-        explanation: fields.explanation || "此題由 Markdown 匯入。"
+        hints: buildBilingualList(fields.hint, fields.hinten),
+        explanation: bilingual(fields.explanation || textOf(FALLBACK_TEXT.importedExplanation, "zh"), fields.explanationen)
       };
       if (type === "choice") {
-        question.options = (fields.options || "").split("|").map((item) => item.trim()).filter(Boolean);
+        const options = splitPipe(fields.options);
+        const optionsEn = splitPipe(fields.optionsen);
+        question.options = options.map((option, optionIndex) => bilingual(option, optionsEn[optionIndex]));
         question.answer = Number(fields.answer);
       } else if (type === "boolean") {
-        question.answer = ["true", "1", "yes", "是", "正確"].includes(normalizeText(fields.answer));
+        question.answer = parseBoolean(fields.answer);
       } else if (type === "fill") {
-        question.answers = (fields.answer || "").split("|").map((item) => item.trim()).filter(Boolean);
+        question.answers = unique([...splitPipe(fields.answer), ...splitPipe(fields.answeren)]);
         question.caseSensitive = fields.casesensitive === "true";
       } else if (type === "concept") {
-        question.keywords = (fields.keywords || "").split("|").map((group) => group.split(",").map((item) => item.trim()).filter(Boolean)).filter((group) => group.length);
-        question.modelAnswer = fields.answer || fields.modelanswer || "請依課程內容回答。";
+        question.keywords = mergeKeywordFields(fields.keywords, fields.keywordsen);
+        question.modelAnswer = bilingual(fields.modelanswer || fields.answer || textOf(FALLBACK_TEXT.modelAnswer, "zh"), fields.modelansweren || fields.answeren);
       }
       return question;
     });
   }
 
   function validateQuestion(question, index) {
-    const prefix = `第 ${index + 1} 題`;
-    if (!question || typeof question !== "object") throw new Error(`${prefix}格式不正確`);
-    if (!TYPE_LABELS[question.type]) throw new Error(`${prefix}的 type 不支援`);
-    if (!question.title || !question.prompt) throw new Error(`${prefix}缺少 title 或 prompt`);
-    if (question.type === "choice" && (!Array.isArray(question.options) || question.options.length < 2 || !Number.isInteger(Number(question.answer)) || Number(question.answer) < 0 || Number(question.answer) >= question.options.length)) throw new Error(`${prefix}選項或答案索引不正確`);
-    if (question.type === "fill" && (!Array.isArray(question.answers) || !question.answers.length)) throw new Error(`${prefix}缺少可接受答案`);
-    if (question.type === "boolean" && typeof question.answer !== "boolean") throw new Error(`${prefix}答案必須是 true/false`);
-    if (question.type === "concept" && (!Array.isArray(question.keywords) || !question.keywords.length || !question.modelAnswer)) throw new Error(`${prefix}缺少 keywords 或 modelAnswer`);
+    const prefix = plainText({ zh: `第 ${index + 1} 題`, en: `Question ${index + 1}` });
+    if (!question || typeof question !== "object") throw new Error(`${prefix}: invalid format`);
+    if (!TYPE_LABELS[question.type]) throw new Error(`${prefix}: unsupported type`);
+    if (!textOf(question.title) || !textOf(question.prompt)) throw new Error(`${prefix}: missing title or prompt`);
+    if (question.type === "choice" && (!Array.isArray(question.options) || question.options.length < 2 || !Number.isInteger(Number(question.answer)) || Number(question.answer) < 0 || Number(question.answer) >= question.options.length)) throw new Error(`${prefix}: invalid options or answer index`);
+    if (question.type === "fill" && (!Array.isArray(question.answers) || !question.answers.length)) throw new Error(`${prefix}: missing accepted answers`);
+    if (question.type === "boolean" && typeof question.answer !== "boolean") question.answer = parseBoolean(question.answer);
+    if (question.type === "concept" && (!Array.isArray(question.keywords) || !question.keywords.length || !question.modelAnswer)) throw new Error(`${prefix}: missing keywords or modelAnswer`);
     question.id ||= `import-${Date.now()}-${index}`;
     question.variantId ||= question.id;
     if (question.type === "choice") question.answer = Number(question.answer);
     if (question.type === "concept") question.keywords = question.keywords.map((group) => Array.isArray(group) ? group : [group]);
-    question.category ||= "匯入題庫";
+    question.category ||= FALLBACK_TEXT.importedCategory;
     question.difficulty = ["Easy", "Medium", "Hard"].includes(question.difficulty) ? question.difficulty : "Medium";
-    question.hints = Array.isArray(question.hints) && question.hints.length ? question.hints : ["回到題目中的關鍵名詞思考。"];
-    question.explanation ||= "此題由外部題庫匯入。";
+    question.hints = Array.isArray(question.hints) && question.hints.length ? question.hints : [FALLBACK_TEXT.importedHint];
+    question.explanation ||= FALLBACK_TEXT.importedExplanation;
     return question;
   }
 
@@ -649,22 +836,34 @@ answer: 10 | Flag 10</pre>
       const text = await file.text();
       const raw = file.name.toLowerCase().endsWith(".json") ? JSON.parse(text) : parseMarkdown(text);
       const list = (Array.isArray(raw) ? raw : [raw]).map(validateQuestion);
-      if (!list.length) throw new Error("找不到題目。Markdown 題目需以 ## Q: 開頭");
+      if (!list.length) throw new Error(plainText({ zh: "沒有可匯入的題目；Markdown 題目請以 ## Q: 開頭。", en: "No importable questions. Markdown questions must start with ## Q:." }));
       const existingIds = new Set(allQuestions().map((question) => question.id));
-      const unique = list.filter((question) => !existingIds.has(question.id));
-      if (!unique.length) throw new Error("題目 ID 已存在，沒有可新增的題目");
-      state.customQuestions.push(...unique);
+      const uniqueQuestions = list.filter((question) => !existingIds.has(question.id));
+      if (!uniqueQuestions.length) throw new Error(plainText({ zh: "題目 ID 已存在，沒有新增題目。", en: "Question IDs already exist; nothing was added." }));
+      state.customQuestions.push(...uniqueQuestions);
       localStorage.setItem(STORAGE.questions, JSON.stringify(state.customQuestions));
       renderLibrary();
-      toast(`已匯入 ${unique.length} 題。`);
+      toast({ zh: `已匯入 ${uniqueQuestions.length} 題。`, en: `Imported ${uniqueQuestions.length} question(s).` });
     } catch (error) {
-      toast(`匯入失敗：${error.message}`, "error");
+      toast({ zh: `匯入失敗：${error.message}`, en: `Import failed: ${error.message}` }, "error");
     } finally {
       fileInput.value = "";
     }
   }
 
+  function unique(items) {
+    return [...new Set(items.filter((item) => item !== null && item !== undefined && String(item).trim() !== "").map((item) => String(item).trim()))];
+  }
+
   document.addEventListener("click", (event) => {
+    const languageButton = event.target.closest("[data-language]");
+    if (languageButton) {
+      state.language = normalizeLanguage(languageButton.dataset.language);
+      localStorage.setItem(STORAGE.language, state.language);
+      render();
+      return;
+    }
+
     const nav = event.target.closest("[data-view]");
     if (nav) return navigate(nav.dataset.view);
 
@@ -691,11 +890,11 @@ answer: 10 | Flag 10</pre>
     if (action === "retry") navigate("home");
     if (action === "history") navigate("history");
     if (action === "import") fileInput.click();
-    if (action === "clear-history" && window.confirm("確定清除所有本機挑戰紀錄？")) {
+    if (action === "clear-history" && window.confirm(plainText({ zh: "確定要清除全部練習紀錄嗎？", en: "Clear all practice records?" }))) {
       localStorage.removeItem(STORAGE.history);
       renderHistory();
     }
-    if (action === "clear-custom" && window.confirm("確定移除所有自行匯入的題目？")) {
+    if (action === "clear-custom" && window.confirm(plainText({ zh: "確定要清除全部匯入題目嗎？", en: "Clear all imported questions?" }))) {
       state.customQuestions = [];
       localStorage.removeItem(STORAGE.questions);
       renderLibrary();

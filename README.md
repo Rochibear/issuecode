@@ -26,13 +26,15 @@ python -m http.server 4173
 
 - 選擇、填空、是非與概念題
 - 同一知識點可建立多種題型變體，每次只隨機抽一種
+- 介面支援中文、英文、中英雙語同時呈現
 - 測驗前設定提示與偷看答案次數
 - 每題計分、總分、作答時間與暱稱紀錄
 - 結果頁並列作答與參考答案，概念題以異色關鍵字顯示命中／缺漏
 - 挑戰紀錄與自訂題庫保存在瀏覽器 `localStorage`
-- 支援結構化 Markdown 與 JSON 題庫匯入
+- 題庫管理會同時列出內建題庫與匯入題庫
+- 支援結構化 Markdown 與 JSON 題庫匯入，舊的純中文格式仍可使用
 
-概念題依關鍵概念群組的覆蓋率自動計分。提示題最高 8 分，偷看答案的題目為 0 分。
+概念題依關鍵概念群組的覆蓋率自動計分，關鍵字可同時放中文與英文同義詞。提示題最高 8 分，偷看答案的題目為 0 分。
 
 ## 題庫匯入
 
@@ -44,5 +46,17 @@ Markdown 格式可參考 `sample-questions.md`。每題以 `## Q:` 開頭，`typ
 - `fill`：`answer` 可用 `|` 提供多個可接受答案。
 - `boolean`：`answer` 使用 `true` 或 `false`。
 - `concept`：`keywords` 用 `|` 分隔概念群組，同群組同義詞用逗號分隔；`answer` 是參考答案。
+
+可選的雙語欄位：
+
+- `titleEn`
+- `promptEn`
+- `categoryEn`
+- `optionsEn`
+- `answerEn`
+- `hintEn`
+- `keywordsEn`
+- `modelAnswerEn`
+- `explanationEn`
 
 JSON 欄位與 `questions.js` 內建題庫相同，可匯入單一物件或陣列。
