@@ -1,6 +1,6 @@
 // Built-in IssueCode question bank.
 // Generated from Markdown with: node tools/generate-default-questions.mjs <question-bank-dir> questions.js
-// Source files: 01-差假漏刷卡與事後期限.md, 02-加班與加班費.md, 03-申請單與赴陸.md, 04-車輛管理.md, 05-考核與語文能力.md, 06-補助津貼.md, 07-介接排班與召回.md
+// Source files: 01-差假漏刷卡與事後期限.md, 02-加班與加班費.md, 03-申請單與赴陸.md, 04-車輛管理.md, 05-考核與語文能力.md, 06-補助津貼.md, 07-介接排班與召回.md, 08-新題型樣本-測試用.md, 09-LeetCode樣本-測試用.md
 
 window.DEFAULT_QUESTIONS = [
   {
@@ -199,7 +199,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "先用 SQL 直接查 sysconfig 的 eipsc_varvalue 確認真值，不要相信設定畫面。若是 -1，週末會被算進 1 天的期限，週五漏週一補＝日曆 3 天，3>1 被擋。要放行就改成 0 或含該假別 Vaid 的 | 清單；改完務必確認真的存了、且因為設定有快取要重載／重啟 AP 才生效。判斷數學是：扣假日分支用「(今天−漏刷日的日曆天)−期間例假日筆數 > 事後期限」才擋。",
-      "en": "First query sysconfig.eipsc_varvalue directly with SQL to confirm the real value rather than trusting the screen. If it is -1, weekends count into the one-day deadline; Friday-missed re-applied Monday is 3 calendar days, 3>1 so it is blocked. To allow it, set 0 or a |-list containing that leave Vaid; after saving, verify it was actually stored and reload/restart the AP because the setting is cached. The math: the holiday-excluding branch blocks only when (today − missed-punch calendar days) − count of holidays in the span > deadline."
+      "en": "First query sysconfig.eipsc_varvalue directly with SQL to confirm the real value rather than trusting the screen. If it is -1, weekends count into the one-day deadline; Friday-missed re-applied Monday is 3 calendar days, 3>1 so it is blocked. To allow it, set 0 or a |-list containing that leave Vaid; after saving, verify it was actually stored and reload/restart the AP because the setting is cached. The math: the holiday-excluding branch blocks only when (today − missed-punch calendar days) − count of holidays in the span > deadline.\n\n---"
     }
   },
   {
@@ -393,7 +393,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "根因是行事曆匯入寫的假日為 item=0，但 IsHoliday 與 HumanlyUtility_5/46 的非排班分支只讀 item=1/2，看不到匯入的假日，導致非排班同仁的六日／國定假在事後期限不被扣，0 形同 -1。治本是在這些 SP 的非排班分支補上「where humho_item=0 and humho_date between …」的 UNION／判斷。要注意 HumanlyUtility_5 共用於所有差假、IsHoliday 用很廣（加班、時數），改完都要回歸測試。排班人員走另一條（讀 hum_wkrecord 的 classset<=0），不受此影響。",
-      "en": "The root cause is that calendar import writes holidays as item=0, but IsHoliday and the HumanlyUtility_5/46 non-shift branch only read item=1/2, so imported holidays are invisible — non-shift staff's weekends/national holidays are not deducted from the deadline, making 0 behave like -1. The proper fix is to add a \"where humho_item=0 and humho_date between …\" UNION/condition to the non-shift branch of these SPs. Note HumanlyUtility_5 is shared by all leave types and IsHoliday is used very widely (overtime, hours), so both need regression testing. Shift staff use a different path (hum_wkrecord classset<=0) and are unaffected."
+      "en": "The root cause is that calendar import writes holidays as item=0, but IsHoliday and the HumanlyUtility_5/46 non-shift branch only read item=1/2, so imported holidays are invisible — non-shift staff's weekends/national holidays are not deducted from the deadline, making 0 behave like -1. The proper fix is to add a \"where humho_item=0 and humho_date between …\" UNION/condition to the non-shift branch of these SPs. Note HumanlyUtility_5 is shared by all leave types and IsHoliday is used very widely (overtime, hours), so both need regression testing. Shift staff use a different path (hum_wkrecord classset<=0) and are unaffected.\n\n---"
     }
   },
   {
@@ -579,7 +579,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "C# 端（C:\\flowing）只是呼叫 RangeCheckUtility.GetRangeCheck(...).Check()，真正的期限與例假日判斷在外部 VB 專案 CommonClass.vbproj。它在 Flowing.sln 是 ProjectReference，原始碼在 C:\\Code\\Project\\CommonClassM。所以只 grep C:\\flowing 會漏，必須去搜 C:\\Code\\Project\\CommonClassM\\**\\*.vb，讀對應假別的 RangeCheck_<type>.vb 與其基底類別（RangeCheckParent/Base）。",
-      "en": "The C# side (C:\\flowing) only calls RangeCheckUtility.GetRangeCheck(...).Check(); the real deadline/holiday logic is in the external VB project CommonClass.vbproj. It is a ProjectReference in Flowing.sln with source at C:\\Code\\Project\\CommonClassM. Grepping only C:\\flowing misses it — search C:\\Code\\Project\\CommonClassM\\**\\*.vb and read the matching RangeCheck_<type>.vb plus its base classes (RangeCheckParent/Base)."
+      "en": "The C# side (C:\\flowing) only calls RangeCheckUtility.GetRangeCheck(...).Check(); the real deadline/holiday logic is in the external VB project CommonClass.vbproj. It is a ProjectReference in Flowing.sln with source at C:\\Code\\Project\\CommonClassM. Grepping only C:\\flowing misses it — search C:\\Code\\Project\\CommonClassM\\**\\*.vb and read the matching RangeCheck_<type>.vb plus its base classes (RangeCheckParent/Base).\n\n---"
     }
   },
   {
@@ -972,7 +972,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "用邊界值測：當月累計剛好到上限、差一小時、超過上限各一筆，確認剛好到不擋、超過要擋。再用不同加班類別（一般／專案）驗證規則是依類別而非寫死。最後跑回歸確認原本可申請的案例不被誤擋。",
-      "en": "Use boundary cases: month-to-date exactly at the cap, one hour short, and over the cap — confirm at-cap passes and over-cap is blocked. Test different overtime types (general/project) to confirm rules are type-driven, not hard-coded. Finally regression-test that previously valid applications are not wrongly blocked."
+      "en": "Use boundary cases: month-to-date exactly at the cap, one hour short, and over the cap — confirm at-cap passes and over-cap is blocked. Test different overtime types (general/project) to confirm rules are type-driven, not hard-coded. Finally regression-test that previously valid applications are not wrongly blocked.\n\n---"
     }
   },
   {
@@ -1166,7 +1166,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "邏輯寫反在正常路徑常常照樣通過，只有在特定條件才走錯分支，加上若例外又被靜默吞掉，畫面看起來正常只是資料怪，所以容易漏掉。預防方式：單元測試同時涵蓋條件成立與不成立兩種情形、補邊界與反例、條件命名清楚、code review 特別檢查比較方向與否定，並讓例外被記錄而非吞掉。",
-      "en": "Inverted logic often still passes the happy path and only takes the wrong branch on specific inputs; if the exception is also silently swallowed, the screen looks fine but data is wrong, so it slips through. Prevention: unit tests covering both true and false cases, boundary and negative cases, clear condition naming, code review focused on comparison direction and negation, and logging exceptions instead of swallowing them."
+      "en": "Inverted logic often still passes the happy path and only takes the wrong branch on specific inputs; if the exception is also silently swallowed, the screen looks fine but data is wrong, so it slips through. Prevention: unit tests covering both true and false cases, boundary and negative cases, clear condition naming, code review focused on comparison direction and negation, and logging exceptions instead of swallowing them.\n\n---"
     }
   },
   {
@@ -1362,7 +1362,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "因為兩個並行請求可能同時讀到相同的「目前最大編號」，各自加一後寫入，造成重複或拿到非預期編號，本質是缺少同步／原子性。修法包括：把讀＋寫放進 DB 交易鎖內成為原子操作（#254 做法），由 SP 直接回傳產生的編號；或改用資料庫序列、自動遞增、唯一鍵約束等機制，讓編號產生不再「先讀後寫」。",
-      "en": "Two concurrent requests can read the same \"current max number,\" each add one and write, producing duplicates or unexpected numbers — fundamentally a lack of synchronization/atomicity. Fixes: wrap read+write in a DB transaction lock to make it atomic (#254's approach) and have the SP return the generated number; or use a database sequence, auto-increment, or unique-key constraint so numbering no longer relies on read-then-write."
+      "en": "Two concurrent requests can read the same \"current max number,\" each add one and write, producing duplicates or unexpected numbers — fundamentally a lack of synchronization/atomicity. Fixes: wrap read+write in a DB transaction lock to make it atomic (#254's approach) and have the SP return the generated number; or use a database sequence, auto-increment, or unique-key constraint so numbering no longer relies on read-then-write.\n\n---"
     }
   },
   {
@@ -1557,7 +1557,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "容易出錯的點包括：進位時機（該先算總額再進位，還是各段先進位）、倍率分段的分配順序（#52 採高倍率優先）、以及補休時數要與費用用相同規則同步扣除，否則進位後對不上。驗證方式：用有餘數與剛好整除的邊界案例，人工試算各倍率金額與補休扣除後逐欄比對清冊，再回歸既有案例確認總額不變。",
-      "en": "Error-prone points: rounding timing (round the total vs round each tier), the allocation order across rate tiers (#52 uses higher-rate-first), and deducting comp-leave hours by the same rule as the amounts so they reconcile after rounding. To verify: use boundary cases with and without remainders, hand-calculate each rate's amount and comp-leave deduction, compare column-by-column with the statement, then regression-test that totals are unchanged."
+      "en": "Error-prone points: rounding timing (round the total vs round each tier), the allocation order across rate tiers (#52 uses higher-rate-first), and deducting comp-leave hours by the same rule as the amounts so they reconcile after rounding. To verify: use boundary cases with and without remainders, hand-calculate each rate's amount and comp-leave deduction, compare column-by-column with the statement, then regression-test that totals are unchanged.\n\n---"
     }
   },
   {
@@ -1749,7 +1749,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "因為每次進位都會把小數往上推，多步進位會累積誤差讓總額偏高，所以進位時機與次數會改變最終金額。正確原則是中間計算（如時薪）保留精度不進位，只在最後一次依法規／需求指定的進位法（#96 為無條件進位）對補發金額處理，這樣金額才正確且可驗算、與既有清冊一致。",
-      "en": "Each rounding pushes the fraction up, so multiple roundings accumulate error and inflate the total — thus timing and count change the final amount. The correct principle: keep intermediate values (e.g. hourly wage) precise without rounding, and round only once at the end using the method required by law/spec (#96 uses round-up) on the back-pay, so the amount is correct, verifiable, and consistent with existing statements."
+      "en": "Each rounding pushes the fraction up, so multiple roundings accumulate error and inflate the total — thus timing and count change the final amount. The correct principle: keep intermediate values (e.g. hourly wage) precise without rounding, and round only once at the end using the method required by law/spec (#96 uses round-up) on the back-pay, so the amount is correct, verifiable, and consistent with existing statements.\n\n---"
     }
   },
   {
@@ -1941,7 +1941,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "因為核發時數要核准當下才算得出來，申請中沒有核發時數，只能取申請時數。核准後，若加班日還沒過（今天或之後）實際時數仍可能變動，取申請時數較保守；加班日已過（昨天或之前）則已有確定的核發時數，取核發時數最貼近實際。這樣月累計才能既不高估也不低估，符合內政部客製需求。",
-      "en": "Because issued hours are computed only at approval, pending applications have none and must use applied hours. After approval, if the overtime date hasn't passed (today or later) the actual hours may still change, so applied hours are the conservative choice; once the date has passed (yesterday or earlier) the issued hours are settled and best reflect reality. This keeps the monthly accumulation neither over- nor under-counted, matching the MOI customization."
+      "en": "Because issued hours are computed only at approval, pending applications have none and must use applied hours. After approval, if the overtime date hasn't passed (today or later) the actual hours may still change, so applied hours are the conservative choice; once the date has passed (yesterday or earlier) the issued hours are settled and best reflect reality. This keeps the monthly accumulation neither over- nor under-counted, matching the MOI customization.\n\n---"
     }
   },
   {
@@ -2322,7 +2322,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "設計上要讓「性質」這個選項一旦為否，就清空並禁止相關時數（公務、可補休），且前端隱藏欄位與後端稽核要雙重把關，不能只靠前端。切換選項時要重算或清掉殘值，避免使用者先填再改性質留下舊值。驗證要測來回切換、空值與既有單據相容，確保「未具公差性質」永遠不帶這兩種時數。",
-      "en": "The design should make the \"nature\" option, once set to no, clear and forbid the related hours (official-duty, comp-leave), enforced both by hiding fields on the frontend and by backend validation — never frontend only. On toggling the option, recompute or clear stale values so a user can't fill first then change nature leaving old values. Verify by toggling back and forth, testing empty values and compatibility with existing forms, ensuring \"not official-duty\" never carries those two hour types."
+      "en": "The design should make the \"nature\" option, once set to no, clear and forbid the related hours (official-duty, comp-leave), enforced both by hiding fields on the frontend and by backend validation — never frontend only. On toggling the option, recompute or clear stale values so a user can't fill first then change nature leaving old values. Verify by toggling back and forth, testing empty values and compatibility with existing forms, ensuring \"not official-duty\" never carries those two hour types.\n\n---"
     }
   },
   {
@@ -2511,7 +2511,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "風險是共用模型被多張單據（出差、公假等）使用，改一處的條件會同時改變所有共用者的行為，可能誤傷其他單據。降低波及的作法：先找出所有共用者與呼叫點，用類別或旗標把修正限縮到目標情境（#203 即額外限制公假類別），改完對每張共用單據都做回歸測試；若情境差異大，考慮拆分模型或加上明確條件分流。",
-      "en": "The risk is that a shared model used by several forms (business trip, public leave, etc.) will, when one condition changes, alter behavior for all consumers and possibly harm others. To limit the blast radius: first identify all consumers/call sites, scope the fix to the target case with a type or flag (#203 restricted the public-leave type), and regression-test every form using the model; if the cases diverge enough, consider splitting the model or adding an explicit branching condition."
+      "en": "The risk is that a shared model used by several forms (business trip, public leave, etc.) will, when one condition changes, alter behavior for all consumers and possibly harm others. To limit the blast radius: first identify all consumers/call sites, scope the fix to the target case with a type or flag (#203 restricted the public-leave type), and regression-test every form using the model; if the cases diverge enough, consider splitting the model or adding an explicit branching condition.\n\n---"
     }
   },
   {
@@ -2702,7 +2702,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "這類 bug 多半是頁面重新渲染或某個事件（如切換含假日）觸發時，程式無條件重設欄位狀態，把使用者已填或既有的值清成 null，而稽核又把 null 當未填擋下。防範作法：只在真正必要時重算欄位，否則保留既有值；區分 null 與 0／有值的語意；切換選項時保留或正確帶入原值。測試要涵蓋「填值後更新頁面／切換選項」確認值仍在且稽核通過。",
-      "en": "These bugs usually occur when a re-render or an event (e.g. toggling \"include holidays\") unconditionally resets the field state, blanking the user's entered or existing value to null, while validation treats null as \"not filled\" and blocks it. Prevention: recompute the field only when truly necessary, otherwise preserve the existing value; distinguish null from 0/filled semantics; on option toggles preserve or correctly carry the original value. Test \"enter value then refresh/toggle\" to confirm the value persists and validation passes."
+      "en": "These bugs usually occur when a re-render or an event (e.g. toggling \"include holidays\") unconditionally resets the field state, blanking the user's entered or existing value to null, while validation treats null as \"not filled\" and blocks it. Prevention: recompute the field only when truly necessary, otherwise preserve the existing value; distinguish null from 0/filled semantics; on option toggles preserve or correctly carry the original value. Test \"enter value then refresh/toggle\" to confirm the value persists and validation passes.\n\n---"
     }
   },
   {
@@ -2895,7 +2895,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "應該兩者都做。前端檢查提升體驗、即時提示使用者，但前端可被繞過（直接打 API、改請求），所以後端必須是最後防線、以後端為準。像 #113 的時數不為 NULL 檢查，若只放前端，惡意或異常請求仍會讓空值流入計算與稽核造成錯誤；後端把關才能確保資料正確。",
-      "en": "Both. Frontend checks improve UX and give instant feedback, but the frontend can be bypassed (direct API calls, tampered requests), so the backend must be the authoritative last line of defense. For #113's not-NULL hour check, frontend-only would still let abnormal or malicious requests push nulls into calculation and validation; backend enforcement guarantees correct data."
+      "en": "Both. Frontend checks improve UX and give instant feedback, but the frontend can be bypassed (direct API calls, tampered requests), so the backend must be the authoritative last line of defense. For #113's not-NULL hour check, frontend-only would still let abnormal or malicious requests push nulls into calculation and validation; backend enforcement guarantees correct data.\n\n---"
     }
   },
   {
@@ -3276,7 +3276,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "先承認可能是環境層差異，比對測試機與正式環境的 WAF、反向代理、權限與設定。確認請求是否真的到達後端——若被網路層（WAF）攔截，後端根本沒收到，就會出現像 not exists 的假象。可暫時插 debuglog 觀察、與資安人員協作確認攔截規則（#253 即 WAF 誤判 SQL injection），再用改傳輸格式（改 JSON／POST）繞過誤判，最後拔掉 debuglog 並回歸。",
-      "en": "First accept it may be an environment-layer difference and compare WAF, reverse proxy, permissions, and config between test and production. Verify whether the request actually reaches the backend — if a network layer (WAF) blocks it, the backend never receives it, producing a false symptom like \"not exists.\" Temporarily add debug logging to observe, collaborate with security staff to confirm the blocking rule (#253 was WAF misclassifying SQL injection), then change the transport format (to JSON/POST) to bypass the false positive, and finally remove the debug log and regression-test."
+      "en": "First accept it may be an environment-layer difference and compare WAF, reverse proxy, permissions, and config between test and production. Verify whether the request actually reaches the backend — if a network layer (WAF) blocks it, the backend never receives it, producing a false symptom like \"not exists.\" Temporarily add debug logging to observe, collaborate with security staff to confirm the blocking rule (#253 was WAF misclassifying SQL injection), then change the transport format (to JSON/POST) to bypass the false positive, and finally remove the debug log and regression-test.\n\n---"
     }
   },
   {
@@ -3467,7 +3467,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "先看堆疊追蹤（stack trace）定位拋例外的行號與物件，確認是哪個物件為 null。接著往回追 null 的來源——是沒初始化、查無資料回傳 null、還是傳錯參數導致取不到。根治是針對來源補上判空或正確初始化（必要時給合理預設或明確訊息），而不是用 try-catch 吞掉。最後重現原情境驗證不再拋例外並回歸列印頁面。",
-      "en": "First read the stack trace to locate the throwing line and object and confirm which object is null. Then trace back to the null source — uninitialized, a query returning null, or a wrong parameter causing a miss. Fix at the source with a null check or proper initialization (a sensible default or clear message where needed), not by swallowing it in try-catch. Finally reproduce the scenario to confirm it no longer throws and regression-test the print page."
+      "en": "First read the stack trace to locate the throwing line and object and confirm which object is null. Then trace back to the null source — uninitialized, a query returning null, or a wrong parameter causing a miss. Fix at the source with a null check or proper initialization (a sensible default or clear message where needed), not by swallowing it in try-catch. Finally reproduce the scenario to confirm it no longer throws and regression-test the print page.\n\n---"
     }
   },
   {
@@ -3657,7 +3657,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "應做多層：前端即時提示提升體驗、後端稽核作為不可繞過的把關、資料庫唯一鍵約束作為最終保證。只靠前端會被繞過、只靠應用層稽核在並行寫入下仍可能競態而重複，唯有 DB 唯一鍵能在任何情況下擋住。導入唯一約束前還要先清理既有重複資料，否則建立約束會失敗。",
-      "en": "Use multiple layers: frontend instant feedback for UX, backend validation as a non-bypassable gate, and a database unique constraint as the final guarantee. Frontend-only can be bypassed; application-level checks can still race under concurrent writes; only a DB unique key blocks duplicates in all cases. Before adding the constraint, clean up existing duplicate data, or creating the constraint will fail."
+      "en": "Use multiple layers: frontend instant feedback for UX, backend validation as a non-bypassable gate, and a database unique constraint as the final guarantee. Frontend-only can be bypassed; application-level checks can still race under concurrent writes; only a DB unique key blocks duplicates in all cases. Before adding the constraint, clean up existing duplicate data, or creating the constraint will fail.\n\n---"
     }
   },
   {
@@ -4043,7 +4043,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "把 try-catch 範圍包太大，任何一筆資料異常都會讓整批落入 catch 而失敗，#266 就是因此回傳整批空白，使用者以為沒資料，且錯誤被吞掉很難追查。正確的粒度是縮小 try 範圍、逐筆處理或先驗證資料格式，讓壞的那筆被略過或標記、其餘照常顯示，並把例外記錄到 log 而非靜默吞掉，這樣既不中斷整體又能定位問題資料。",
-      "en": "Too broad a try-catch makes any single bad record drop the whole batch into catch and fail; #266 returned an entirely blank batch, so users thought there was no data and the swallowed error was hard to trace. The correct granularity is to narrow the try scope, process per record or validate format first, so a bad record is skipped or flagged while the rest display normally, and log the exception instead of swallowing it — keeping the whole from breaking while still pinpointing the bad data."
+      "en": "Too broad a try-catch makes any single bad record drop the whole batch into catch and fail; #266 returned an entirely blank batch, so users thought there was no data and the swallowed error was hard to trace. The correct granularity is to narrow the try scope, process per record or validate format first, so a bad record is skipped or flagged while the rest display normally, and log the exception instead of swallowing it — keeping the whole from breaking while still pinpointing the bad data.\n\n---"
     }
   },
   {
@@ -4228,7 +4228,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "雖然只是字型與文字調整，仍要確認：列印與 PDF 匯出的版面是否一致套用（評核表常要列印）、不同瀏覽器與解析度下的顯示、9px 是否太小影響可讀性或換行、以及該樣式是否被其他畫面共用而被波及。最後核對標題與條列文字確實符合需求文字。",
-      "en": "Even a font/text change should be verified for: consistent application in print and PDF export (assessment forms are often printed), display across browsers and resolutions, whether 9px is too small for readability or causes wrapping, and whether the style is shared by other screens and thus affected. Finally confirm the title and bullet text exactly match the requirement."
+      "en": "Even a font/text change should be verified for: consistent application in print and PDF export (assessment forms are often printed), display across browsers and resolutions, whether 9px is too small for readability or causes wrapping, and whether the style is shared by other screens and thus affected. Finally confirm the title and bullet text exactly match the requirement.\n\n---"
     }
   },
   {
@@ -4607,7 +4607,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "因為要靠多個欄位（humef_status、humef_exportdate…）的組合推斷狀態，各功能各自判斷時容易不一致，也可能漏掉某種欄位組合而判錯。穩健的做法是把狀態判斷集中成共用方法／單一來源，先列出完整的狀態真值表（哪些欄位組合對應哪個狀態），所有功能都呼叫同一套邏輯；並針對「核銷後不可修改」等規則明確鎖定。測試要涵蓋每一種狀態與邊界組合，確保各畫面判斷一致。",
-      "en": "Because status is inferred from a combination of fields (humef_status, humef_exportdate, …), each feature judging on its own easily becomes inconsistent and may miss some field combination and misjudge. The robust approach is to centralize status judgment into a shared method/single source, first enumerating a full state truth table (which field combinations map to which state) and having all features call the same logic; and explicitly lock rules like \"no edit after write-off.\" Test every state and boundary combination to ensure all screens judge consistently."
+      "en": "Because status is inferred from a combination of fields (humef_status, humef_exportdate, …), each feature judging on its own easily becomes inconsistent and may miss some field combination and misjudge. The robust approach is to centralize status judgment into a shared method/single source, first enumerating a full state truth table (which field combinations map to which state) and having all features call the same logic; and explicitly lock rules like \"no edit after write-off.\" Test every state and boundary combination to ensure all screens judge consistently.\n\n---"
     }
   },
   {
@@ -4795,7 +4795,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "設計原則是「有變動才記、且記下變更前後值」。對會改資料的核銷，每次有欄位變動就保存變更前與變更後的值，並記錄操作人、時間與動作，達到「誰在何時改了什麼」可追溯。對不改資料的操作（如 #133 的批次核銷）則與核銷紀錄分開處理或不重複記錄，避免產生大量無意義的冗餘紀錄。",
-      "en": "The principle is \"log only when something changes, recording before and after values.\" For data-changing write-offs, whenever a field changes, save its before and after values along with the operator, timestamp, and action, achieving traceability of \"who changed what when.\" For non-changing operations (like #133's batch write-off), handle them separately from or skip the write-off log to avoid generating large amounts of meaningless redundant records."
+      "en": "The principle is \"log only when something changes, recording before and after values.\" For data-changing write-offs, whenever a field changes, save its before and after values along with the operator, timestamp, and action, achieving traceability of \"who changed what when.\" For non-changing operations (like #133's batch write-off), handle them separately from or skip the write-off log to avoid generating large amounts of meaningless redundant records.\n\n---"
     }
   },
   {
@@ -5174,7 +5174,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "先確認呼叫端傳入的參數與識別碼正確（對到的是同一個人）。接著檢查後端查詢條件——是否因在職／未刪除／單位範圍等條件把人員或資料過濾掉（#198 即缺在職與未刪除條件）。用 SQL 直接重跑該查詢，比對加不加條件的差異，確認人員對應是否撈到正確的人。最後區分究竟是「真的沒資料」還是「條件過濾掉」，再對症修正並回歸介接。",
-      "en": "First verify the caller's input parameters and identifiers are correct (matching the same person). Then check the backend query conditions — whether active/not-deleted/unit-scope conditions filtered out the person or data (#198 lacked active and not-deleted). Rerun the query directly in SQL, comparing with and without conditions to confirm whether the person mapping fetched the right person. Finally distinguish \"truly no data\" from \"filtered out,\" fix accordingly, and regression-test the integration."
+      "en": "First verify the caller's input parameters and identifiers are correct (matching the same person). Then check the backend query conditions — whether active/not-deleted/unit-scope conditions filtered out the person or data (#198 lacked active and not-deleted). Rerun the query directly in SQL, comparing with and without conditions to confirm whether the person mapping fetched the right person. Finally distinguish \"truly no data\" from \"filtered out,\" fix accordingly, and regression-test the integration.\n\n---"
     }
   },
   {
@@ -5363,7 +5363,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "要以接收平台的規格文件為準，確認欄位順序、型別、編碼與分隔等都一致；擴充新欄位（如未休假加班）時要確保不破壞對方既有解析、盡量向後相容。上線前用對方提供的測試環境實際報送驗證，並用邊界資料（未休假加班、各種差假與加班）測試格式與數值正確。最後保留可回滾的舊格式或版本切換，以防對方尚未準備好。",
-      "en": "Follow the receiving platform's spec document, ensuring field order, types, encoding, and delimiters all match; when adding new fields (e.g. un-taken-leave overtime), ensure existing parsing isn't broken and stay backward compatible where possible. Before go-live, actually submit through their test environment to validate, and test the format and values with boundary data (un-taken-leave overtime, various leave and overtime). Finally keep a rollback path to the old format or a version switch in case the other side isn't ready."
+      "en": "Follow the receiving platform's spec document, ensuring field order, types, encoding, and delimiters all match; when adding new fields (e.g. un-taken-leave overtime), ensure existing parsing isn't broken and stay backward compatible where possible. Before go-live, actually submit through their test environment to validate, and test the format and values with boundary data (un-taken-leave overtime, various leave and overtime). Finally keep a rollback path to the old format or a version switch in case the other side isn't ready.\n\n---"
     }
   },
   {
@@ -5551,7 +5551,7 @@ window.DEFAULT_QUESTIONS = [
     ],
     "modelAnswer": {
       "zh": "因為佔缺隊長實際服務／佔缺在另一個單位（depidOrigin），排班與加班費應歸到佔缺單位而非原單位，否則統計會算到錯的單位。#215 在寫入 hum_note 時就把 humnt_depid 存成佔缺單位、humnt_agent 固定 480，並讓加班費清冊查詢也直接依 humnt_depid 判斷——關鍵是寫入與查詢用同一個口徑（humnt_depid），口徑不一致就會漏算或歸錯單位。",
-      "en": "Because a borrowed captain actually serves/occupies a slot in another unit (depidOrigin), shift and overtime pay should be attributed to the borrowed unit, not the original, or statistics land on the wrong unit. #215 stores humnt_depid as the borrowed unit (and fixes humnt_agent at 480) on writing hum_note, and makes the overtime-pay query also filter directly by humnt_depid — the key is that write and read use the same basis (humnt_depid); an inconsistency would cause missing counts or wrong-unit attribution."
+      "en": "Because a borrowed captain actually serves/occupies a slot in another unit (depidOrigin), shift and overtime pay should be attributed to the borrowed unit, not the original, or statistics land on the wrong unit. #215 stores humnt_depid as the borrowed unit (and fixes humnt_agent at 480) on writing hum_note, and makes the overtime-pay query also filter directly by humnt_depid — the key is that write and read use the same basis (humnt_depid); an inconsistency would cause missing counts or wrong-unit attribution.\n\n---"
     }
   },
   {
@@ -5744,5 +5744,387 @@ window.DEFAULT_QUESTIONS = [
       "zh": "要先確立用餐休息不計入工作時數的原則，計算時從申請時數扣除用餐休息時數，扣除後再與上限比對（未逾上限取申請時數）。要處理邊界：用餐時數為 0、用餐時數超過或等於總時數（不可扣成負數）、以及逾上限時的取值。測試涵蓋有填／未填用餐時數兩種情形，並回歸既有召回案例確認原本正確的計算不受影響。",
       "en": "First establish that meal breaks don't count as working time, so the calculation subtracts meal-break hours from applied hours and then compares against the cap (within cap → use the applied figure). Handle boundaries: meal hours of 0, meal hours equal to or exceeding total (must not go negative), and the value taken when over the cap. Test both with and without meal hours entered, and regression-test existing recall cases to confirm previously correct calculations are unaffected."
     }
+  },
+  {
+    "id": "SAMPLE-MULTI-1",
+    "groupId": "SAMPLE-MULTI",
+    "variantId": "SAMPLE-MULTI-1",
+    "groupTitle": {
+      "zh": "SAMPLE-MULTI",
+      "en": "SAMPLE-MULTI"
+    },
+    "title": {
+      "zh": "以下哪些是「IsHoliday／HumanlyUtility_5/46 漏讀 humho_item=0」造成的後果？（多選）",
+      "en": "Which are consequences of \"IsHoliday/HumanlyUtility_5/46 missing humho_item=0\"? (multiple)"
+    },
+    "type": "multi",
+    "category": {
+      "zh": "假日判斷邏輯",
+      "en": "Holiday-detection logic"
+    },
+    "difficulty": "advanced",
+    "prompt": {
+      "zh": "行事曆匯入寫的假日是 humho_item=0，但這兩支只讀 item=1/2。下列哪些是其後果？（多選）",
+      "en": "Calendar import writes holidays as humho_item=0, but these two only read item=1/2. Which are the consequences? (select all)"
+    },
+    "hints": [
+      {
+        "zh": "排班人員走另一條路徑（hum_wkrecord），不受 item=0 漏讀影響。",
+        "en": "Shift staff use a different path (hum_wkrecord) and are unaffected by the item=0 omission."
+      }
+    ],
+    "explanation": {
+      "zh": "漏讀 item=0 只影響「非排班」分支：六日／國定假不被扣、0 形同 -1、週五漏補不了週一。排班人員讀 hum_wkrecord 的 classset<=0，走另一條路徑，不受此影響，故第 3 項錯誤。",
+      "en": "The item=0 omission only affects the non-shift branch: holidays not deducted, 0 acting like -1, Friday-missed not re-applicable Monday. Shift staff read hum_wkrecord classset<=0 via a different path and are unaffected, so option 3 is wrong.\n\n---"
+    },
+    "options": [
+      {
+        "zh": "非排班同仁的六日／國定假在事後期限不被扣",
+        "en": "Non-shift staff's weekends/national holidays are not deducted from the deadline"
+      },
+      {
+        "zh": "DayOff.OverdueContainHoliday=0 形同 -1（純日曆天）",
+        "en": "DayOff.OverdueContainHoliday=0 behaves like -1 (pure calendar days)"
+      },
+      {
+        "zh": "排班人員（讀 hum_wkrecord classset<=0）也一起失效",
+        "en": "Shift staff (reading hum_wkrecord classset<=0) also break"
+      },
+      {
+        "zh": "週五漏刷卡補不了隔週一",
+        "en": "Friday missed-punch cannot be re-applied the next Monday"
+      }
+    ],
+    "answer": [
+      0,
+      1,
+      3
+    ]
+  },
+  {
+    "id": "SAMPLE-ORDER-1",
+    "groupId": "SAMPLE-ORDER",
+    "variantId": "SAMPLE-ORDER-1",
+    "groupTitle": {
+      "zh": "SAMPLE-ORDER",
+      "en": "SAMPLE-ORDER"
+    },
+    "title": {
+      "zh": "請將 Issue 追查步驟排成正確順序。",
+      "en": "Put the issue-tracing steps in the correct order."
+    },
+    "type": "ordering",
+    "category": {
+      "zh": "問題追蹤",
+      "en": "Issue tracing"
+    },
+    "difficulty": "advanced",
+    "prompt": {
+      "zh": "請將以下 Issue 追查步驟由先到後排成正確順序。",
+      "en": "Arrange the following issue-tracing steps in the correct order, first to last."
+    },
+    "hints": [
+      {
+        "zh": "先有可重現的觀察證據，最後才修正與驗證。",
+        "en": "Start from reproducible observable evidence; fix and verify last."
+      }
+    ],
+    "explanation": {
+      "zh": "正確順序：先重現並取得 Network（索引1）→ 用 action／識別欄位沿各層追（索引2）→ 追到 DB／SP 找資料條件或設定值（索引0）→ 最小變更修正並驗證、準備回滾（索引3）。",
+      "en": "Correct order: reproduce and capture Network (idx 1) → trace through layers via action/identifiers (idx 2) → reach DB/SP to find the data condition or setting (idx 0) → smallest fix with verification and rollback (idx 3).\n\n---"
+    },
+    "options": [
+      {
+        "zh": "追到 DB／Stored Procedure 找出資料條件或設定值",
+        "en": "Trace to DB/Stored Procedure to find the data condition or setting"
+      },
+      {
+        "zh": "重現問題並取得 Network request／response",
+        "en": "Reproduce the issue and capture the Network request/response"
+      },
+      {
+        "zh": "用 action 或識別欄位沿 Web／API／Service 追",
+        "en": "Use the action or identifier fields to trace through Web/API/Service"
+      },
+      {
+        "zh": "以最小變更修正，並驗證前後差異、準備回滾",
+        "en": "Apply the smallest fix, verify the before/after, and prepare rollback"
+      }
+    ],
+    "answer": [
+      1,
+      2,
+      0,
+      3
+    ],
+    "placeholder": {
+      "zh": "例：B,C,A,D",
+      "en": "Example: B,C,A,D"
+    }
+  },
+  {
+    "id": "SAMPLE-MATCH-1",
+    "groupId": "SAMPLE-MATCH",
+    "variantId": "SAMPLE-MATCH-1",
+    "groupTitle": {
+      "zh": "SAMPLE-MATCH",
+      "en": "SAMPLE-MATCH"
+    },
+    "title": {
+      "zh": "請將 hum_holiday.humho_item 的值與其意義配對。",
+      "en": "Match hum_holiday.humho_item values with their meanings."
+    },
+    "type": "matching",
+    "category": {
+      "zh": "假日判斷邏輯",
+      "en": "Holiday-detection logic"
+    },
+    "difficulty": "advanced",
+    "prompt": {
+      "zh": "請將 hum_holiday.humho_item 的三種值，與其正確意義配對。",
+      "en": "Match the three hum_holiday.humho_item values with their correct meanings."
+    },
+    "hints": [
+      {
+        "zh": "行事曆匯入寫的是「全機關共通」那一種。",
+        "en": "Calendar import writes the \"org-wide\" one."
+      }
+    ],
+    "explanation": {
+      "zh": "0＝全機關共通（右索引1）、1＝全體或某職等（右索引2）、2＝某單位／人員（右索引0）。標準完整判斷＝item=0 OR (item=1 且 postid 符) OR (item=2 且 dn 符)。",
+      "en": "0 = org-wide (right idx 1); 1 = all or a rank (right idx 2); 2 = a unit/person (right idx 0). The full standard check = item=0 OR (item=1 and postid matches) OR (item=2 and dn matches).\n\n---"
+    },
+    "left": [
+      {
+        "zh": "0",
+        "en": "0"
+      },
+      {
+        "zh": "1",
+        "en": "1"
+      },
+      {
+        "zh": "2",
+        "en": "2"
+      }
+    ],
+    "right": [
+      {
+        "zh": "某單位／人員（dn）",
+        "en": "A unit/person (dn)"
+      },
+      {
+        "zh": "全機關共通（適用所有人，行事曆匯入寫的）",
+        "en": "Org-wide (applies to everyone, written by calendar import)"
+      },
+      {
+        "zh": "全體或某職等（postid，例假日設定手動建）",
+        "en": "All or a rank (postid, created in holiday setup)"
+      }
+    ],
+    "answer": [
+      [
+        0,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        0
+      ]
+    ],
+    "placeholder": {
+      "zh": "例：A-2,B-3,C-1",
+      "en": "Example: A-2,B-3,C-1"
+    }
+  },
+  {
+    "id": "SAMPLE-SCENARIO-1",
+    "groupId": "SAMPLE-SCENARIO",
+    "variantId": "SAMPLE-SCENARIO-1",
+    "groupTitle": {
+      "zh": "SAMPLE-SCENARIO",
+      "en": "SAMPLE-SCENARIO"
+    },
+    "title": {
+      "zh": "〔情境〕週五漏刷、週一補不了，且設定畫面顯示 0，下一步？",
+      "en": "[Scenario] Friday missed, can't re-apply Monday, screen shows 0 — next step?"
+    },
+    "type": "scenario",
+    "category": {
+      "zh": "根因判斷",
+      "en": "Root-cause judgment"
+    },
+    "difficulty": "advanced",
+    "prompt": {
+      "zh": "根據上述情境，最該優先確認哪一項？",
+      "en": "Given the scenario above, which should you verify first?"
+    },
+    "hints": [
+      {
+        "zh": "設定畫面會騙人；且匯入的假日是 item=0，扣假 SP 可能讀不到。",
+        "en": "The screen can lie; imported holidays are item=0, which the deduction SP may not read."
+      }
+    ],
+    "explanation": {
+      "zh": "畫面顯示 0 不代表真的存了 0，要用 SQL 查 eipsc_varvalue 真值。即使真的是 0，匯入的假日是 item=0，而 HumanlyUtility_5 非排班分支只讀 item=1/2，可能仍扣不到——這兩點都要先確認，而非貿然改設定或重啟。漏刷卡計算用登入者本人，代填無法解。",
+      "en": "A screen showing 0 doesn't mean 0 was stored — query eipsc_varvalue. Even if it is 0, imported holidays are item=0 while HumanlyUtility_5's non-shift branch reads only item=1/2, so deduction may still fail — verify both before changing settings or restarting. Missed-punch uses the logged-in user, so filing on behalf won't help."
+    },
+    "options": [
+      {
+        "zh": "直接把設定改成 0 再試一次",
+        "en": "Just set the value to 0 and retry"
+      },
+      {
+        "zh": "用 SQL 查 sysconfig.eipsc_varvalue 的真值，並確認 HumanlyUtility_5 讀不讀得到 item=0 的假日",
+        "en": "Query sysconfig.eipsc_varvalue for the real value, and check whether HumanlyUtility_5 can read item=0 holidays"
+      },
+      {
+        "zh": "直接重啟 AP",
+        "en": "Just restart the AP"
+      },
+      {
+        "zh": "請使用者改用代填別人",
+        "en": "Ask the user to file on someone's behalf"
+      }
+    ],
+    "answer": 1,
+    "scenario": {
+      "zh": "土測回報：某非排班同仁週五漏刷卡，週一想補申請卻被擋。已確認 DayOff.OverdueContainHoliday 的設定畫面顯示 0，且已用「行事曆資料匯入」建立當月六日為假日。",
+      "en": "Field test report: a non-shift employee missed a punch on Friday and is blocked from re-applying on Monday. The DayOff.OverdueContainHoliday settings screen shows 0, and that month's weekends were created as holidays via \"calendar import.\""
+    }
+  },
+  {
+    "id": "CODE-OVERDUE-1",
+    "groupId": "CODE-OVERDUE",
+    "variantId": "CODE-OVERDUE-1",
+    "groupTitle": {
+      "zh": "CODE-OVERDUE",
+      "en": "CODE-OVERDUE"
+    },
+    "title": {
+      "zh": "〔issue 衍生〕事後申請期限：扣除例假日後是否仍可申請？",
+      "en": "[Issue-derived] Post-deadline: can you still apply after excluding holidays?"
+    },
+    "type": "code",
+    "category": {
+      "zh": "計算邏輯",
+      "en": "Calculation logic"
+    },
+    "difficulty": "advanced",
+    "prompt": {
+      "zh": "對應 OverdueContainHoliday=0（事後期限扣除例假日）的判斷。給定漏刷日 missDate、今天 today、期間例假日日期清單 holidays、事後期限天數 deadlineDays。令「有效天數 = (today − missDate 的日曆天) − (落在 missDate 與 today 之間、即 missDate < h < today 的 holidays 筆數)」。當「有效天數 > deadlineDays」時逾期（不可申請）。請實作回傳「是否仍可申請」（可申請=true）。",
+      "en": "Models OverdueContainHoliday=0 (deadline excludes holidays). Given the missed-punch date missDate, today, a list of holiday dates holidays, and the deadline in days deadlineDays. Let \"effective = (calendar days from missDate to today) − (count of holidays h with missDate < h < today)\". It is overdue (cannot apply) when effective > deadlineDays. Return whether one can still apply (true = can apply)."
+    },
+    "hints": [
+      {
+        "zh": "先算日曆天差，再扣掉「嚴格落在 missDate 與 today 之間」的例假日筆數；比較用 > 不是 >=。",
+        "en": "Compute the calendar-day gap, subtract holidays strictly between missDate and today; compare with > not >=."
+      }
+    ],
+    "explanation": {
+      "zh": "這就是 RangeCheck_9 事後分支「扣假日」模式的數學：日曆天 − 期間例假日筆數 > 期限才擋。週五漏、週一補在 deadline=1 時剛好不逾期（3−2=1，不大於 1），呼應真實案件中設定為 0（扣例假日）才放行。",
+      "en": "This is the math of RangeCheck_9's holiday-excluding branch: block only when calendar days − holidays-in-period > deadline. Friday-missed re-applied Monday is exactly within a deadline of 1 (3−2=1, not greater than 1), matching the real case where setting 0 (exclude holidays) allows it.\n\n---"
+    },
+    "lang": "csharp",
+    "signature": "bool CanApply(DateTime missDate, DateTime today, DateTime[] holidays, int deadlineDays)",
+    "constraints": {
+      "zh": "missDate <= today；0 <= holidays.Length <= 366；deadlineDays >= 0；只比較日期（時分秒忽略）。",
+      "en": "missDate <= today; 0 <= holidays.Length <= 366; deadlineDays >= 0; compare dates only (ignore time)."
+    },
+    "examples": [
+      {
+        "zh": "週五漏(06-19)、今天週一(06-22)、holidays=[06-20,06-21]、deadline=1 → 有效天數 3−2=1，1>1 為否 → true(可申請)",
+        "en": "missed Fri(06-19), today Mon(06-22), holidays=[06-20,06-21], deadline=1 → effective 3−2=1, 1>1 false → true (can apply)"
+      },
+      {
+        "zh": "同上但 deadline=0 → 1>0 為真 → false(逾期)",
+        "en": "same but deadline=0 → 1>0 true → false (overdue)"
+      }
+    ],
+    "tests": [
+      "missDate=2026-06-19,today=2026-06-22,holidays=[2026-06-20,2026-06-21],deadline=1 -> true",
+      "missDate=2026-06-19,today=2026-06-22,holidays=[2026-06-20,2026-06-21],deadline=0 -> false",
+      "missDate=2026-06-19,today=2026-06-22,holidays=[],deadline=1 -> false",
+      "missDate=2026-06-22,today=2026-06-22,holidays=[],deadline=0 -> true"
+    ],
+    "solution": "```csharp\npublic bool CanApply(DateTime missDate, DateTime today, DateTime[] holidays, int deadlineDays)\n{\n    int calendarDays = (today.Date - missDate.Date).Days;\n    int holidayCount = 0;\n    foreach (var h in holidays)\n        if (h.Date > missDate.Date && h.Date < today.Date)\n            holidayCount++;\n    int effective = calendarDays - holidayCount;\n    return effective <= deadlineDays; // 未逾期才可申請\n}\n```",
+    "complexity": {
+      "zh": "時間 O(n)、空間 O(1)（n = holidays 筆數）",
+      "en": "時間 O(n)、空間 O(1)（n = holidays 筆數）"
+    },
+    "placeholder": {
+      "zh": "請貼上你的解法",
+      "en": "Paste your solution"
+    },
+    "modelAnswer": "```csharp\npublic bool CanApply(DateTime missDate, DateTime today, DateTime[] holidays, int deadlineDays)\n{\n    int calendarDays = (today.Date - missDate.Date).Days;\n    int holidayCount = 0;\n    foreach (var h in holidays)\n        if (h.Date > missDate.Date && h.Date < today.Date)\n            holidayCount++;\n    int effective = calendarDays - holidayCount;\n    return effective <= deadlineDays; // 未逾期才可申請\n}\n```"
+  },
+  {
+    "id": "CODE-TWOSUM-1",
+    "groupId": "CODE-TWOSUM",
+    "variantId": "CODE-TWOSUM-1",
+    "groupTitle": {
+      "zh": "CODE-TWOSUM",
+      "en": "CODE-TWOSUM"
+    },
+    "title": {
+      "zh": "〔經典〕Two Sum：找出兩數之和等於目標",
+      "en": "[Classic] Two Sum"
+    },
+    "type": "code",
+    "category": {
+      "zh": "演算法",
+      "en": "Algorithms"
+    },
+    "difficulty": "beginner",
+    "prompt": {
+      "zh": "給定整數陣列 nums 與目標值 target，回傳兩個相加等於 target 的元素「索引」（0-based）。可假設恰有一組解，且同一元素不可重複使用。回傳索引由小到大。",
+      "en": "Given an integer array nums and a target, return the indices (0-based) of the two numbers that add up to target. Assume exactly one solution and you may not use the same element twice. Return indices in ascending order."
+    },
+    "hints": [
+      {
+        "zh": "用雜湊表存「已看過的值→索引」，每個元素查 target−目前值是否出現過，一次掃描即可。",
+        "en": "Use a hash map of \"seen value → index\"; for each element check if target−current was seen. One pass."
+      }
+    ],
+    "explanation": {
+      "zh": "暴力雙迴圈是 O(n²)。改用雜湊表把「找補數」變成 O(1)，整體一次掃描 O(n)。因為先查再放，能避免同一元素被重複使用。",
+      "en": "The brute-force double loop is O(n²). A hash map makes the complement lookup O(1), so one pass is O(n). Checking before inserting prevents reusing the same element."
+    },
+    "lang": "csharp",
+    "signature": "int[] TwoSum(int[] nums, int target)",
+    "constraints": {
+      "zh": "2 <= nums.Length <= 10^4；-10^9 <= nums[i], target <= 10^9；恰有一組解。",
+      "en": "2 <= nums.Length <= 10^4; -10^9 <= nums[i], target <= 10^9; exactly one solution."
+    },
+    "examples": [
+      {
+        "zh": "nums=[2,7,11,15], target=9 → [0,1]（2+7=9）",
+        "en": "nums=[2,7,11,15], target=9 → [0,1] (2+7=9)"
+      },
+      {
+        "zh": "nums=[3,2,4], target=6 → [1,2]",
+        "en": "nums=[3,2,4], target=6 → [1,2]"
+      }
+    ],
+    "tests": [
+      "nums=[2,7,11,15],target=9 -> [0,1]",
+      "nums=[3,2,4],target=6 -> [1,2]",
+      "nums=[3,3],target=6 -> [0,1]",
+      "nums=[-1,-2,-3,-4,-5],target=-8 -> [2,4]"
+    ],
+    "solution": "```csharp\npublic int[] TwoSum(int[] nums, int target)\n{\n    var seen = new Dictionary<int, int>(); // value -> index\n    for (int i = 0; i < nums.Length; i++)\n    {\n        int need = target - nums[i];\n        if (seen.TryGetValue(need, out int j))\n            return new int[] { j, i };\n        seen[nums[i]] = i;\n    }\n    return new int[0];\n}\n```",
+    "complexity": {
+      "zh": "時間 O(n)、空間 O(n)",
+      "en": "時間 O(n)、空間 O(n)"
+    },
+    "placeholder": {
+      "zh": "請貼上你的解法",
+      "en": "Paste your solution"
+    },
+    "modelAnswer": "```csharp\npublic int[] TwoSum(int[] nums, int target)\n{\n    var seen = new Dictionary<int, int>(); // value -> index\n    for (int i = 0; i < nums.Length; i++)\n    {\n        int need = target - nums[i];\n        if (seen.TryGetValue(need, out int j))\n            return new int[] { j, i };\n        seen[nums[i]] = i;\n    }\n    return new int[0];\n}\n```"
   }
 ];

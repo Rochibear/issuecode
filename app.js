@@ -19,7 +19,12 @@
     choice: { zh: "選擇題", en: "Multiple choice" },
     fill: { zh: "填空題", en: "Fill in the blank" },
     boolean: { zh: "是非題", en: "True / False" },
-    concept: { zh: "概念題", en: "Concept" }
+    concept: { zh: "概念題", en: "Concept" },
+    multi: { zh: "多選題", en: "Multi-select" },
+    ordering: { zh: "排序題", en: "Ordering" },
+    matching: { zh: "配對題", en: "Matching" },
+    scenario: { zh: "情境題", en: "Scenario" },
+    code: { zh: "程式題", en: "Code" }
   };
 
   const BOOL_LABELS = {
@@ -511,6 +516,7 @@
             </div>
             <h1>${renderText(question.title)}</h1>
             <p class="question-prompt">${renderText(question.prompt)}</p>
+            ${renderQuestionDetails(question)}
             <div class="answer-zone">${renderAnswerControl(question, answer)}</div>
             ${hintHtml ? `<div class="hint-box"><strong>${renderText({ zh: "提示", en: "Hint" })}</strong><br>${hintHtml}</div>` : ""}
             ${peekHtml ? `<div class="peek-box"><strong>${renderText({ zh: "參考答案", en: "Reference answer" })}</strong><br>${peekHtml}</div>` : ""}
@@ -545,11 +551,43 @@
       </section>`;
   }
 
+  function renderQuestionDetails(question) {
+    const blocks = [];
+    if (question.scenario) {
+      blocks.push(`<div class="question-detail scenario-box"><strong>${renderText({ zh: "情境", en: "Scenario" })}</strong><p>${renderText(question.scenario)}</p></div>`);
+    }
+    if (question.signature) {
+      blocks.push(`<div class="question-detail code-meta"><strong>${renderText({ zh: "函式簽章", en: "Signature" })}</strong><code>${escapeHtml(question.signature)}</code></div>`);
+    }
+    if (question.constraints && textOf(question.constraints)) {
+      blocks.push(`<div class="question-detail"><strong>${renderText({ zh: "限制條件", en: "Constraints" })}</strong><p>${renderText(question.constraints)}</p></div>`);
+    }
+    if (Array.isArray(question.examples) && question.examples.length) {
+      blocks.push(`<div class="question-detail"><strong>${renderText({ zh: "範例", en: "Examples" })}</strong><ul>${question.examples.map((item) => `<li>${renderText(item)}</li>`).join("")}</ul></div>`);
+    }
+    if (Array.isArray(question.tests) && question.tests.length) {
+      blocks.push(`<div class="question-detail"><strong>${renderText({ zh: "測資", en: "Tests" })}</strong><ul>${question.tests.map((item) => `<li><code>${escapeHtml(item)}</code></li>`).join("")}</ul></div>`);
+    }
+    if (question.complexity && textOf(question.complexity)) {
+      blocks.push(`<div class="question-detail"><strong>${renderText({ zh: "複雜度", en: "Complexity" })}</strong><p>${renderText(question.complexity)}</p></div>`);
+    }
+    return blocks.length ? `<div class="question-details">${blocks.join("")}</div>` : "";
+  }
+
   function renderAnswerControl(question, answer) {
-    if (question.type === "choice") {
+    if (question.type === "choice" || question.type === "scenario") {
       return `<div class="choice-list">${question.options.map((option, index) => `
         <label class="choice-option">
           <input type="radio" name="answer" value="${index}" ${String(answer.value) === String(index) ? "checked" : ""} />
+          <span class="option-key">${String.fromCharCode(65 + index)}</span>
+          <span>${renderText(option)}</span>
+        </label>`).join("")}</div>`;
+    }
+    if (question.type === "multi") {
+      const selected = Array.isArray(answer.value) ? answer.value.map(String) : [];
+      return `<div class="choice-list">${question.options.map((option, index) => `
+        <label class="choice-option">
+          <input type="checkbox" name="answer" value="${index}" ${selected.includes(String(index)) ? "checked" : ""} />
           <span class="option-key">${String.fromCharCode(65 + index)}</span>
           <span>${renderText(option)}</span>
         </label>`).join("")}</div>`;
@@ -560,7 +598,20 @@
         <label class="choice-option"><input type="radio" name="answer" value="false" ${answer.value === false ? "checked" : ""} /><span class="option-key boolean-key">${escapeHtml(booleanKey("incorrect"))}</span><span>${renderText(BOOL_LABELS.incorrect)}</span></label>
       </div>`;
     }
-    if (question.type === "concept") {
+    if (question.type === "ordering") {
+      return `
+        <div class="ordered-options">${question.options.map((option, index) => `<div class="order-item"><span class="option-key">${String.fromCharCode(65 + index)}</span><span>${renderText(option)}</span></div>`).join("")}</div>
+        <input class="answer-input" id="text-answer" placeholder="${escapeHtml(plainText(question.placeholder || { zh: "例：B,C,A,D", en: "Example: B,C,A,D" }))}" value="${escapeHtml(answer.value || "")}" />`;
+    }
+    if (question.type === "matching") {
+      return `
+        <div class="matching-board">
+          <div>${question.left.map((item, index) => `<div class="order-item"><span class="option-key">${String.fromCharCode(65 + index)}</span><span>${renderText(item)}</span></div>`).join("")}</div>
+          <div>${question.right.map((item, index) => `<div class="order-item"><span class="option-key">${index + 1}</span><span>${renderText(item)}</span></div>`).join("")}</div>
+        </div>
+        <input class="answer-input" id="text-answer" placeholder="${escapeHtml(plainText(question.placeholder || { zh: "例：A-2,B-3,C-1", en: "Example: A-2,B-3,C-1" }))}" value="${escapeHtml(answer.value || "")}" />`;
+    }
+    if (question.type === "concept" || question.type === "code") {
       return `<textarea class="answer-input" id="text-answer" placeholder="${escapeHtml(plainText(question.placeholder || FALLBACK_TEXT.answerPlaceholder))}">${escapeHtml(answer.value || "")}</textarea>`;
     }
     return `<input class="answer-input" id="text-answer" placeholder="${escapeHtml(plainText(question.placeholder || FALLBACK_TEXT.answerPlaceholder))}" value="${escapeHtml(answer.value || "")}" />`;
@@ -586,13 +637,27 @@
   }
 
   function answerValue(question) {
-    if (question.type === "choice") return question.options[question.answer];
+    if (question.type === "choice" || question.type === "scenario") return question.options[question.answer];
+    if (question.type === "multi") return joinBilingual(question.answer.map((index) => question.options[index]).filter(Boolean), "、", " / ");
+    if (question.type === "ordering") return joinBilingual(question.answer.map((index) => question.options[index]).filter(Boolean), " → ", " → ");
+    if (question.type === "matching") return {
+      zh: question.answer.map(([left, right]) => `${textOf(question.left[left], "zh")} → ${textOf(question.right[right], "zh")}`).join("；"),
+      en: question.answer.map(([left, right]) => `${textOf(question.left[left], "en")} → ${textOf(question.right[right], "en")}`).join("; ")
+    };
     if (question.type === "boolean") return question.answer ? BOOL_LABELS.correct : BOOL_LABELS.incorrect;
     if (question.type === "fill") return {
       zh: question.answers.map((item) => textOf(item, "zh")).join("／"),
       en: question.answers.map((item) => textOf(item, "en")).join(" / ")
     };
+    if (question.type === "code") return question.solution || question.modelAnswer || FALLBACK_TEXT.modelAnswer;
     return question.modelAnswer;
+  }
+
+  function joinBilingual(items, zhSeparator, enSeparator) {
+    return {
+      zh: items.map((item) => textOf(item, "zh")).join(zhSeparator),
+      en: items.map((item) => textOf(item, "en")).join(enSeparator)
+    };
   }
 
   function renderAnswerLabel(question) {
@@ -601,14 +666,15 @@
 
   function renderUserAnswerLabel(question, value, correct) {
     let label = value;
-    if (question.type === "choice") label = question.options[value] ?? FALLBACK_TEXT.noAnswer;
+    if (question.type === "choice" || question.type === "scenario") label = question.options[value] ?? FALLBACK_TEXT.noAnswer;
+    if (question.type === "multi" && Array.isArray(value)) label = joinBilingual(value.map((index) => question.options[index]).filter(Boolean), "、", " / ");
     if (question.type === "boolean") label = value === true ? BOOL_LABELS.correct : value === false ? BOOL_LABELS.incorrect : FALLBACK_TEXT.noAnswer;
-    const content = question.type === "choice" || question.type === "boolean" ? renderText(label) : escapeHtml(String(label || plainText(FALLBACK_TEXT.noAnswer)));
+    const content = ["choice", "scenario", "multi", "boolean"].includes(question.type) ? renderText(label) : escapeHtml(String(label || plainText(FALLBACK_TEXT.noAnswer)));
     return `<p class="answer-value ${correct ? "correct" : "incorrect"}">${content}</p>`;
   }
 
   function getKeywordResults(question, value) {
-    if (question.type !== "concept") return [];
+    if (!["concept", "code"].includes(question.type) || !Array.isArray(question.keywords)) return [];
     const input = normalizeText(value);
     return question.keywords.map((group) => {
       const terms = textCandidates(group);
@@ -643,9 +709,12 @@
   }
 
   function collectAnswer(question) {
-    if (question.type === "choice") {
+    if (question.type === "choice" || question.type === "scenario") {
       const selected = document.querySelector('input[name="answer"]:checked');
       return selected ? Number(selected.value) : null;
+    }
+    if (question.type === "multi") {
+      return [...document.querySelectorAll('input[name="answer"]:checked')].map((item) => Number(item.value));
     }
     if (question.type === "boolean") {
       const selected = document.querySelector('input[name="answer"]:checked');
@@ -666,16 +735,57 @@
     });
   }
 
+  function normalizeIndexList(value, optionCount) {
+    if (Array.isArray(value)) return value.map(Number).filter((item) => Number.isInteger(item));
+    const tokens = String(value || "").toUpperCase().match(/[A-Z]|\d+/g) || [];
+    const numbers = tokens.map((token) => /^[A-Z]$/.test(token) ? token.charCodeAt(0) - 65 : Number(token));
+    if (!numbers.includes(0) && numbers.every((item) => item >= 1 && item <= optionCount)) return numbers.map((item) => item - 1);
+    return numbers;
+  }
+
+  function normalizePairList(value, leftCount, rightCount) {
+    const pairs = String(value || "").toUpperCase().match(/([A-Z]|\d+)\s*[-:：]\s*([A-Z]|\d+)/g) || [];
+    return pairs.map((pair) => {
+      const [leftRaw, rightRaw] = pair.split(/\s*[-:：]\s*/);
+      const left = /^[A-Z]$/.test(leftRaw) ? leftRaw.charCodeAt(0) - 65 : Number(leftRaw);
+      let right = /^[A-Z]$/.test(rightRaw) ? rightRaw.charCodeAt(0) - 65 : Number(rightRaw);
+      if (right >= 1 && right <= rightCount) right -= 1;
+      return [left, right];
+    }).filter(([left, right]) => left >= 0 && left < leftCount && right >= 0 && right < rightCount);
+  }
+
+  function sameNumberSet(a, b) {
+    const left = [...a].map(Number).sort((x, y) => x - y);
+    const right = [...b].map(Number).sort((x, y) => x - y);
+    return left.length === right.length && left.every((item, index) => item === right[index]);
+  }
+
+  function sameNumberList(a, b) {
+    return a.length === b.length && a.every((item, index) => Number(item) === Number(b[index]));
+  }
+
+  function samePairList(a, b) {
+    return a.length === b.length && a.every(([left, right], index) => Number(left) === Number(b[index][0]) && Number(right) === Number(b[index][1]));
+  }
+
   function grade(question, value, answerState) {
     let ratio = 0;
-    if (question.type === "choice" || question.type === "boolean") {
+    if (question.type === "choice" || question.type === "scenario" || question.type === "boolean") {
       ratio = value === question.answer ? 1 : 0;
+    } else if (question.type === "multi") {
+      ratio = sameNumberSet(value, question.answer) ? 1 : 0;
+    } else if (question.type === "ordering") {
+      ratio = sameNumberList(normalizeIndexList(value, question.options.length), question.answer) ? 1 : 0;
+    } else if (question.type === "matching") {
+      ratio = samePairList(normalizePairList(value, question.left.length, question.right.length), question.answer) ? 1 : 0;
     } else if (question.type === "fill") {
       ratio = fillMatches(question, value) ? 1 : 0;
     } else if (question.type === "concept") {
       const input = normalizeText(value);
       const hits = question.keywords.filter((group) => textCandidates(group).some((keyword) => input.includes(normalizeText(keyword)))).length;
       ratio = hits / question.keywords.length;
+    } else if (question.type === "code") {
+      ratio = String(value || "").trim().length >= 20 ? 1 : 0;
     }
     const maxScore = answerState.peeked ? 0 : answerState.hintsUsed > 0 ? 8 : 10;
     return { score: Math.round(ratio * maxScore), correct: ratio >= 0.75, ratio };
@@ -686,7 +796,7 @@
     const question = currentQuestion();
     const answerState = session.answers[session.index];
     const value = collectAnswer(question);
-    if (value === null || value === "") {
+    if (value === null || value === "" || (Array.isArray(value) && !value.length)) {
       toast({ zh: "請先作答再送出。", en: "Answer before submitting." }, "error");
       return;
     }
@@ -903,6 +1013,20 @@ explanationEn: Add only the missing source to keep risk low.</pre>
     return String(value || "").split("|").map((item) => item.trim()).filter(Boolean);
   }
 
+  function splitComma(value) {
+    return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
+  }
+
+  function parseAnswerIndexes(value) {
+    return splitComma(value).map((item) => Number(item)).filter((item) => Number.isInteger(item));
+  }
+
+  function parseAnswerPairs(value) {
+    return splitComma(value)
+      .map((item) => item.split("-").map((part) => Number(part.trim())))
+      .filter((pair) => pair.length === 2 && pair.every((part) => Number.isInteger(part)));
+  }
+
   function buildBilingualList(zhValue, enValue) {
     const zhList = splitPipe(zhValue);
     const enList = splitPipe(enValue);
@@ -922,16 +1046,27 @@ explanationEn: Add only the missing source to keep risk low.</pre>
     return ["true", "1", "yes", "y", "是", "正確", "true / correct"].includes(normalizeText(value));
   }
 
+  function parseFieldLines(lines) {
+    const fields = {};
+    let currentKey = "";
+    lines.forEach((line) => {
+      const match = line.match(/^([a-zA-Z][a-zA-Z0-9]*):\s*(.*)$/);
+      if (match) {
+        currentKey = match[1].toLowerCase();
+        fields[currentKey] = match[2].trim();
+      } else if (currentKey) {
+        fields[currentKey] = `${fields[currentKey] ? `${fields[currentKey]}\n` : ""}${line}`;
+      }
+    });
+    return fields;
+  }
+
   function parseMarkdown(text) {
     const blocks = text.split(/^##\s+Q:\s*/gmi).slice(1);
     return blocks.map((block, index) => {
       const lines = block.trim().split(/\r?\n/);
       const title = lines.shift().trim();
-      const fields = {};
-      lines.forEach((line) => {
-        const match = line.match(/^([a-zA-Z]+):\s*(.*)$/);
-        if (match) fields[match[1].toLowerCase()] = match[2].trim();
-      });
+      const fields = parseFieldLines(lines);
       const type = fields.type || "choice";
       const question = {
         id: `import-md-${Date.now()}-${index}`,
@@ -945,11 +1080,28 @@ explanationEn: Add only the missing source to keep risk low.</pre>
         hints: buildBilingualList(fields.hint, fields.hinten),
         explanation: bilingual(fields.explanation || textOf(FALLBACK_TEXT.importedExplanation, "zh"), fields.explanationen)
       };
-      if (type === "choice") {
+      if (type === "choice" || type === "scenario") {
         const options = splitPipe(fields.options);
         const optionsEn = splitPipe(fields.optionsen);
         question.options = options.map((option, optionIndex) => bilingual(option, optionsEn[optionIndex]));
         question.answer = Number(fields.answer);
+        if (type === "scenario") question.scenario = bilingual(fields.scenario, fields.scenarioen);
+      } else if (type === "multi") {
+        const options = splitPipe(fields.options);
+        const optionsEn = splitPipe(fields.optionsen);
+        question.options = options.map((option, optionIndex) => bilingual(option, optionsEn[optionIndex]));
+        question.answer = parseAnswerIndexes(fields.answer);
+      } else if (type === "ordering") {
+        const options = splitPipe(fields.options);
+        const optionsEn = splitPipe(fields.optionsen);
+        question.options = options.map((option, optionIndex) => bilingual(option, optionsEn[optionIndex]));
+        question.answer = parseAnswerIndexes(fields.answer);
+        question.placeholder = bilingual(fields.placeholder || "例：B,C,A,D", fields.placeholderen || "Example: B,C,A,D");
+      } else if (type === "matching") {
+        question.left = buildBilingualList(fields.left, fields.leften);
+        question.right = buildBilingualList(fields.right, fields.righten);
+        question.answer = parseAnswerPairs(fields.answer);
+        question.placeholder = bilingual(fields.placeholder || "例：A-2,B-3,C-1", fields.placeholderen || "Example: A-2,B-3,C-1");
       } else if (type === "boolean") {
         question.answer = parseBoolean(fields.answer);
       } else if (type === "fill") {
@@ -958,6 +1110,16 @@ explanationEn: Add only the missing source to keep risk low.</pre>
       } else if (type === "concept") {
         question.keywords = mergeKeywordFields(fields.keywords, fields.keywordsen);
         question.modelAnswer = bilingual(fields.modelanswer || fields.answer || textOf(FALLBACK_TEXT.modelAnswer, "zh"), fields.modelansweren || fields.answeren);
+      } else if (type === "code") {
+        question.lang = fields.lang || "text";
+        question.signature = fields.signature || "";
+        question.constraints = bilingual(fields.constraints, fields.constraintsen);
+        question.examples = buildBilingualList(fields.examples, fields.examplesen);
+        question.tests = splitPipe(fields.tests);
+        question.solution = fields.solution || "";
+        question.complexity = bilingual(fields.complexity, fields.complexityen);
+        question.placeholder = bilingual(fields.placeholder || "請貼上你的解法", fields.placeholderen || "Paste your solution");
+        question.modelAnswer = fields.solution || fields.answer || textOf(FALLBACK_TEXT.modelAnswer, "zh");
       }
       return question;
     });
@@ -968,14 +1130,20 @@ explanationEn: Add only the missing source to keep risk low.</pre>
     if (!question || typeof question !== "object") throw new Error(`${prefix}: invalid format`);
     if (!TYPE_LABELS[question.type]) throw new Error(`${prefix}: unsupported type`);
     if (!textOf(question.title) || !textOf(question.prompt)) throw new Error(`${prefix}: missing title or prompt`);
-    if (question.type === "choice" && (!Array.isArray(question.options) || question.options.length < 2 || !Number.isInteger(Number(question.answer)) || Number(question.answer) < 0 || Number(question.answer) >= question.options.length)) throw new Error(`${prefix}: invalid options or answer index`);
+    if ((question.type === "choice" || question.type === "scenario") && (!Array.isArray(question.options) || question.options.length < 2 || !Number.isInteger(Number(question.answer)) || Number(question.answer) < 0 || Number(question.answer) >= question.options.length)) throw new Error(`${prefix}: invalid options or answer index`);
+    if (question.type === "scenario" && !textOf(question.scenario)) throw new Error(`${prefix}: missing scenario`);
+    if (question.type === "multi" && (!Array.isArray(question.options) || question.options.length < 2 || !Array.isArray(question.answer) || !question.answer.length)) throw new Error(`${prefix}: invalid multi-select options or answers`);
+    if (question.type === "ordering" && (!Array.isArray(question.options) || question.options.length < 2 || !Array.isArray(question.answer) || question.answer.length !== question.options.length)) throw new Error(`${prefix}: invalid ordering options or answer`);
+    if (question.type === "matching" && (!Array.isArray(question.left) || !Array.isArray(question.right) || !Array.isArray(question.answer) || !question.answer.length)) throw new Error(`${prefix}: invalid matching pairs`);
     if (question.type === "fill" && (!Array.isArray(question.answers) || !question.answers.length)) throw new Error(`${prefix}: missing accepted answers`);
     if (question.type === "boolean" && typeof question.answer !== "boolean") question.answer = parseBoolean(question.answer);
     if (question.type === "concept" && (!Array.isArray(question.keywords) || !question.keywords.length || !question.modelAnswer)) throw new Error(`${prefix}: missing keywords or modelAnswer`);
+    if (question.type === "code" && !question.signature && !question.solution) throw new Error(`${prefix}: missing code signature or solution`);
     question.id ||= `import-${Date.now()}-${index}`;
     question.variantId ||= question.id;
-    if (question.type === "choice") question.answer = Number(question.answer);
+    if (question.type === "choice" || question.type === "scenario") question.answer = Number(question.answer);
     if (question.type === "concept") question.keywords = question.keywords.map((group) => Array.isArray(group) ? group : [group]);
+    if (question.type === "code" && question.solution) question.modelAnswer ||= question.solution;
     question.category ||= FALLBACK_TEXT.importedCategory;
     question.difficulty = normalizeDifficulty(question.difficulty || "advanced");
     question.hints = Array.isArray(question.hints) && question.hints.length ? question.hints : [FALLBACK_TEXT.importedHint];

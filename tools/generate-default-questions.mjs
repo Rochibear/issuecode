@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const TYPE_MAP = new Set(["choice", "fill", "boolean", "concept"]);
+const TYPE_MAP = new Set(["choice", "fill", "boolean", "concept", "multi", "ordering", "matching", "scenario", "code"]);
 const DIFFICULTY_MAP = {
   easy: "beginner",
   beginner: "beginner",
@@ -42,8 +42,52 @@ function bilingual(zh, en) {
   return { zh: "", en: "" };
 }
 
+function buildList(zh, en) {
+  const zhList = splitList(zh);
+  const enList = splitList(en);
+  const length = Math.max(zhList.length, enList.length);
+  return Array.from({ length }, (_, index) => bilingual(zhList[index] || enList[index], enList[index] || zhList[index]));
+}
+
 function unique(items) {
   return [...new Set(items.map((item) => String(item).trim()).filter(Boolean))];
+}
+
+function parseCsv(value = "") {
+  return String(value)
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parseIndexList(value = "") {
+  return parseCsv(value).map((item) => Number(item)).filter((item) => Number.isInteger(item));
+}
+
+function parsePairs(value = "") {
+  return parseCsv(value)
+    .map((item) => item.split("-").map((part) => Number(part.trim())))
+    .filter((pair) => pair.length === 2 && pair.every((part) => Number.isInteger(part)));
+}
+
+function parseFields(lines) {
+  const fields = {};
+  let currentKey = "";
+
+  for (const line of lines) {
+    const match = line.match(/^([A-Za-z][A-Za-z0-9]*):\s*(.*)$/);
+    if (match) {
+      currentKey = match[1].toLowerCase();
+      fields[currentKey] = match[2].trim();
+      continue;
+    }
+
+    if (currentKey) {
+      fields[currentKey] = `${fields[currentKey] ? `${fields[currentKey]}\n` : ""}${line}`;
+    }
+  }
+
+  return fields;
 }
 
 function parseIndex() {
@@ -63,13 +107,7 @@ function parseIndex() {
 function parseQuestionBlock(block, fileName) {
   const lines = block.split(/\r?\n/);
   const titleLine = lines.shift()?.replace(/^## Q:\s*/, "").trim() || "";
-  const fields = {};
-
-  for (const line of lines) {
-    const match = line.match(/^([A-Za-z][A-Za-z0-9]*):\s*(.*)$/);
-    if (!match) continue;
-    fields[match[1].toLowerCase()] = match[2].trim();
-  }
+  const fields = parseFields(lines);
 
   const groupId = fields.groupid;
   const type = String(fields.type || "").trim().toLowerCase();
@@ -90,11 +128,41 @@ function parseQuestionBlock(block, fileName) {
     explanation: bilingual(fields.explanation, fields.explanationen)
   };
 
-  if (type === "choice") {
+  if (type === "choice" || type === "scenario") {
     const options = splitList(fields.options);
     const optionsEn = splitList(fields.optionsen);
     question.options = options.map((option, index) => bilingual(option, optionsEn[index] || option));
     question.answer = Number(fields.answer);
+  }
+
+  if (type === "scenario") {
+    question.scenario = bilingual(fields.scenario, fields.scenarioen);
+  }
+
+  if (type === "multi") {
+    const options = splitList(fields.options);
+    const optionsEn = splitList(fields.optionsen);
+    question.options = options.map((option, index) => bilingual(option, optionsEn[index] || option));
+    question.answer = parseIndexList(fields.answer);
+  }
+
+  if (type === "ordering") {
+    const options = splitList(fields.options);
+    const optionsEn = splitList(fields.optionsen);
+    question.options = options.map((option, index) => bilingual(option, optionsEn[index] || option));
+    question.answer = parseIndexList(fields.answer);
+    question.placeholder = bilingual(fields.placeholder || "例：B,C,A,D", fields.placeholderen || "Example: B,C,A,D");
+  }
+
+  if (type === "matching") {
+    const left = splitList(fields.left);
+    const leftEn = splitList(fields.leften);
+    const right = splitList(fields.right);
+    const rightEn = splitList(fields.righten);
+    question.left = left.map((item, index) => bilingual(item, leftEn[index] || item));
+    question.right = right.map((item, index) => bilingual(item, rightEn[index] || item));
+    question.answer = parsePairs(fields.answer);
+    question.placeholder = bilingual(fields.placeholder || "例：A-2,B-3,C-1", fields.placeholderen || "Example: A-2,B-3,C-1");
   }
 
   if (type === "fill") {
@@ -118,6 +186,18 @@ function parseQuestionBlock(block, fileName) {
       ])
     );
     question.modelAnswer = bilingual(fields.answer, fields.modelansweren || fields.answeren || fields.explanationen);
+  }
+
+  if (type === "code") {
+    question.lang = fields.lang || "text";
+    question.signature = fields.signature || "";
+    question.constraints = bilingual(fields.constraints, fields.constraintsen);
+    question.examples = buildList(fields.examples, fields.examplesen);
+    question.tests = splitList(fields.tests);
+    question.solution = fields.solution || "";
+    question.complexity = bilingual(fields.complexity, fields.complexityen);
+    question.placeholder = bilingual(fields.placeholder || "請貼上你的解法", fields.placeholderen || "Paste your solution");
+    question.modelAnswer = fields.solution || fields.answer || "";
   }
 
   return question;

@@ -24,7 +24,7 @@ python -m http.server 4173
 
 ## 功能
 
-- 選擇、填空、是非與概念題
+- 選擇、填空、是非、概念、多選、排序、配對、情境與程式題
 - 同一知識點可建立多種題型變體，每次只隨機抽一種
 - 介面支援中文、英文、中英雙語同時呈現
 - 測驗前設定提示與偷看答案次數
@@ -35,11 +35,11 @@ python -m http.server 4173
 - 題庫管理會同時列出內建題庫與匯入題庫
 - 支援結構化 Markdown 與 JSON 題庫匯入，舊的純中文格式仍可使用
 
-概念題依關鍵概念群組的覆蓋率自動計分，關鍵字可同時放中文與英文同義詞。提示題最高 8 分，偷看答案的題目為 0 分。
+概念題依關鍵概念群組的覆蓋率自動計分，關鍵字可同時放中文與英文同義詞。程式題目前為題目／測資／參考解呈現與文字作答，不執行 C# 編譯判題。提示題最高 8 分，偷看答案的題目為 0 分。
 
 ## 內建基本題庫
 
-`questions.js` 目前內建 120 題，來自 `issue-題庫` Markdown 題庫：30 個 issue group，每個 group 各有選擇、填空、是非、概念 4 種變體。練習時同一個 `groupId` 每次只會隨機抽其中一種題型。
+`questions.js` 目前內建 126 題，來自 `issue-題庫` Markdown 題庫：36 個 issue group。基本題庫仍以同一個 `groupId` 每次只隨機抽其中一種題型；新增樣本包含多選、排序、配對、情境與 C# 程式題。
 
 如需用新版 Markdown 題庫重新產生內建題庫：
 
@@ -71,6 +71,11 @@ Markdown 格式可參考 `sample-questions.md`；未來製作新 Issue 題庫時
 - `fill`：`answer` 可用 `|` 提供多個可接受答案。
 - `boolean`：`answer` 使用 `true` 或 `false`。
 - `concept`：`keywords` 用 `|` 分隔概念群組，同群組同義詞用逗號分隔；`answer` 是參考答案。
+- `multi`：多選題，`answer` 使用逗號分隔正解索引，例如 `0,1,3`。
+- `ordering`：排序題，`answer` 使用逗號分隔正確順序索引，例如 `1,2,0,3`。
+- `matching`：配對題，使用 `left` / `right`，`answer` 使用 `左索引-右索引`，例如 `0-1,1-2,2-0`。
+- `scenario`：情境題，使用 `scenario` 加上一個選擇題式子題。
+- `code`：程式題，支援 `lang`、`signature`、`constraints`、`examples`、`tests`、`solution`、`complexity`。
 
 可選的雙語欄位：
 
