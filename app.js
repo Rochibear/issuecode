@@ -27,6 +27,10 @@
     incorrect: { zh: "錯誤", en: "False" }
   };
 
+  function booleanKey(kind) {
+    return kind === "correct" ? "✓" : "✕";
+  }
+
   const DIFFICULTY_LEVELS = [
     { id: "all", legacy: "", stars: "✦", label: { zh: "全部難度", en: "All levels" }, description: { zh: "從所有難度隨機抽題", en: "Sample from every difficulty" } },
     { id: "beginner", legacy: "Easy", stars: "★", label: { zh: "一星｜初學者", en: "1 star | Beginner" }, description: { zh: "適合熟悉名詞、流程入口與基本判斷", en: "For terms, entry points, and basic judgments" } },
@@ -493,7 +497,7 @@
         </div>
         <div class="quiz-layout">
           <aside class="quiz-sidebar">
-            <div class="sidebar-head">Question map</div>
+            <div class="sidebar-head">${renderText({ zh: "題目地圖", en: "Question map" })}</div>
             <div class="question-map ${mapMode}">${session.questions.map((item, index) => `<button class="question-dot ${index === session.index ? "current" : ""} ${session.answers[index].score !== null ? "done" : ""}" aria-label="${escapeHtml(plainText({ zh: `第 ${index + 1} 題`, en: `Question ${index + 1}` }))}"><span>${escapeHtml(item.groupId || String(index + 1).padStart(2, "0"))}</span><small>${escapeHtml(item.variantId || item.id || "")}</small></button>`).join("")}</div>
             <div class="sidebar-summary">${renderText({ zh: "每組只出一種題型；同一知識點不會在同次練習重複出現。", en: "Only one variant is selected per topic in a single run." })}</div>
           </aside>
@@ -511,29 +515,29 @@
             ${hintHtml ? `<div class="hint-box"><strong>${renderText({ zh: "提示", en: "Hint" })}</strong><br>${hintHtml}</div>` : ""}
             ${peekHtml ? `<div class="peek-box"><strong>${renderText({ zh: "參考答案", en: "Reference answer" })}</strong><br>${peekHtml}</div>` : ""}
             <div class="question-footer">
-              <span class="keyboard-note">SELECT / TYPE YOUR ANSWER</span>
+              <span class="keyboard-note">${renderText({ zh: "選擇或輸入你的答案", en: "Select / type your answer" })}</span>
               <button class="primary-btn" data-action="submit-answer">${renderText({ zh: "送出答案 →", en: "Submit answer →" })}</button>
             </div>
           </article>
 
           <aside class="quiz-tools">
-            <div class="tools-head">Assistance</div>
+            <div class="tools-head">${renderText({ zh: "輔助工具", en: "Assistance" })}</div>
             <div class="tool-card">
-              <div class="tool-top"><strong>${renderText({ zh: "提示", en: "Hint" })}</strong><span class="tool-count">${session.hintsRemaining} LEFT</span></div>
+              <div class="tool-top"><strong>${renderText({ zh: "提示", en: "Hint" })}</strong><span class="tool-count">${renderText({ zh: `剩 ${session.hintsRemaining} 次`, en: `${session.hintsRemaining} LEFT` })}</span></div>
               <p>${renderText({ zh: "提供下一步方向；使用後該題最高 8 分。", en: "Reveal the next direction; max score becomes 8." })}</p>
               <button class="secondary-btn" data-action="hint" ${session.hintsRemaining <= 0 || answer.hintsUsed >= question.hints.length ? "disabled" : ""}>${renderText({ zh: "取得提示", en: "Get hint" })}</button>
             </div>
             <div class="tool-card">
-              <div class="tool-top"><strong>${renderText({ zh: "偷看答案", en: "Peek answer" })}</strong><span class="tool-count">${session.peeksRemaining} LEFT</span></div>
+              <div class="tool-top"><strong>${renderText({ zh: "偷看答案", en: "Peek answer" })}</strong><span class="tool-count">${renderText({ zh: `剩 ${session.peeksRemaining} 次`, en: `${session.peeksRemaining} LEFT` })}</span></div>
               <p>${renderText({ zh: "直接顯示參考答案，該題不再計分。", en: "Show the reference answer; this question earns 0 points." })}</p>
               <button class="ghost-btn" data-action="peek" ${session.peeksRemaining <= 0 || answer.peeked ? "disabled" : ""}>${renderText({ zh: "顯示答案", en: "Show answer" })}</button>
             </div>
             <div class="tool-card">
               <div class="tool-top"><strong>${renderText({ zh: "計分規則", en: "Scoring" })}</strong></div>
               <div class="score-rule">
-                <div class="rule-row"><span>${renderText({ zh: "完整答對", en: "Correct" })}</span><strong>10 pts</strong></div>
-                <div class="rule-row"><span>${renderText({ zh: "使用提示", en: "With hint" })}</span><strong>max 8</strong></div>
-                <div class="rule-row"><span>${renderText({ zh: "偷看答案", en: "Peeked" })}</span><strong>0 pts</strong></div>
+                <div class="rule-row"><span>${renderText({ zh: "完整答對", en: "Correct" })}</span><strong>${renderText({ zh: "10 分", en: "10 pts" })}</strong></div>
+                <div class="rule-row"><span>${renderText({ zh: "使用提示", en: "With hint" })}</span><strong>${renderText({ zh: "最高 8 分", en: "max 8" })}</strong></div>
+                <div class="rule-row"><span>${renderText({ zh: "偷看答案", en: "Peeked" })}</span><strong>${renderText({ zh: "0 分", en: "0 pts" })}</strong></div>
               </div>
             </div>
           </aside>
@@ -552,8 +556,8 @@
     }
     if (question.type === "boolean") {
       return `<div class="boolean-grid">
-        <label class="choice-option"><input type="radio" name="answer" value="true" ${answer.value === true ? "checked" : ""} /><span class="option-key">O</span><span>${renderText(BOOL_LABELS.correct)}</span></label>
-        <label class="choice-option"><input type="radio" name="answer" value="false" ${answer.value === false ? "checked" : ""} /><span class="option-key">X</span><span>${renderText(BOOL_LABELS.incorrect)}</span></label>
+        <label class="choice-option"><input type="radio" name="answer" value="true" ${answer.value === true ? "checked" : ""} /><span class="option-key boolean-key">${escapeHtml(booleanKey("correct"))}</span><span>${renderText(BOOL_LABELS.correct)}</span></label>
+        <label class="choice-option"><input type="radio" name="answer" value="false" ${answer.value === false ? "checked" : ""} /><span class="option-key boolean-key">${escapeHtml(booleanKey("incorrect"))}</span><span>${renderText(BOOL_LABELS.incorrect)}</span></label>
       </div>`;
     }
     if (question.type === "concept") {

@@ -400,6 +400,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, label:has(inp
 .boolean-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .boolean-grid .choice-option { grid-template-columns: 42px 1fr; min-height: 76px; }
 .boolean-grid .option-key { width: 37px; height: 37px; }
+.boolean-grid .boolean-key { font-family: inherit; font-size: 13px; letter-spacing: 0; white-space: nowrap; }
 .answer-input { min-height: 50px; padding: 14px 15px; resize: vertical; line-height: 1.65; }
 textarea.answer-input { min-height: 165px; }
 
