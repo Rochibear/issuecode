@@ -9,9 +9,9 @@
   };
 
   const LANGUAGES = [
-    { id: "zh", label: "中文" },
-    { id: "en", label: "EN" },
-    { id: "both", label: "中英" }
+    { id: "zh", label: "中文", shortLabel: "中", description: { zh: "只顯示中文", en: "Chinese only" } },
+    { id: "en", label: "English", shortLabel: "EN", description: { zh: "只顯示英文", en: "English only" } },
+    { id: "both", label: "中英並行", shortLabel: "中 / EN", description: { zh: "中文與英文同時呈現", en: "Chinese and English shown together" } }
   ];
 
   const TYPE_LABELS = {
@@ -160,6 +160,31 @@
     setTimeout(() => node.remove(), 3200);
   }
 
+  function renderLanguageSwitch(mode = "compact") {
+    return `
+      <div class="language-control ${mode}">
+        <span class="language-label">${renderText({ zh: "語系顯示", en: "Language" })}</span>
+        <div class="language-switch ${mode === "panel" ? "large" : "compact"}" data-language-switch role="group" aria-label="${escapeHtml(plainText({ zh: "語系顯示切換", en: "Language display switch" }))}">
+          ${LANGUAGES.map((item) => `
+            <button type="button" class="${state.language === item.id ? "active" : ""}" data-language="${item.id}" aria-pressed="${state.language === item.id}">
+              <strong>${escapeHtml(mode === "panel" ? item.label : item.shortLabel)}</strong>
+              ${mode === "panel" ? `<small>${renderText(item.description)}</small>` : ""}
+            </button>`).join("")}
+        </div>
+      </div>`;
+  }
+
+  function syncLanguageSwitches() {
+    document.querySelectorAll("[data-language-switch]").forEach((switcher) => {
+      const isLarge = switcher.classList.contains("large");
+      switcher.innerHTML = LANGUAGES.map((item) => `
+        <button type="button" class="${state.language === item.id ? "active" : ""}" data-language="${item.id}" aria-pressed="${state.language === item.id}">
+          <strong>${escapeHtml(isLarge ? item.label : item.shortLabel)}</strong>
+          ${isLarge ? `<small>${renderText(item.description)}</small>` : ""}
+        </button>`).join("");
+    });
+  }
+
   function renderChrome() {
     document.documentElement.lang = state.language === "en" ? "en" : "zh-Hant";
     document.title = plainText({ zh: "IssueCode｜把問題復盤練成直覺", en: "IssueCode | Debug Practice Lab" });
@@ -171,13 +196,7 @@
     document.querySelector('[data-view="home"]').textContent = plainText({ zh: "首頁", en: "Home" });
     document.querySelector('[data-view="history"]').textContent = plainText({ zh: "紀錄", en: "Records" });
     document.querySelector('[data-view="library"]').textContent = plainText({ zh: "題庫", en: "Library" });
-    const switcher = document.querySelector("#language-switch");
-    if (switcher) {
-      switcher.innerHTML = LANGUAGES.map((item) => `
-        <button type="button" class="${state.language === item.id ? "active" : ""}" data-language="${item.id}" aria-pressed="${state.language === item.id}">
-          ${escapeHtml(item.label)}
-        </button>`).join("");
-    }
+    syncLanguageSwitches();
     const localMode = document.querySelector("#local-mode-label");
     if (localMode) localMode.textContent = plainText({ zh: "LOCAL MODE", en: "LOCAL MODE" });
   }
@@ -255,6 +274,10 @@
                 })}</p>
               </div>
               <span class="count-badge">${groups.length} TOPICS / ${questions.length} VARIANTS</span>
+            </div>
+
+            <div class="language-card">
+              ${renderLanguageSwitch("panel")}
             </div>
 
             <div class="form-group">

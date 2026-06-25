@@ -38,7 +38,7 @@ python -m http.server 4173
 
 ## 題庫匯入
 
-Markdown 格式可參考 `sample-questions.md`。每題以 `## Q:` 開頭，`type` 支援：
+Markdown 格式可參考 `sample-questions.md`；未來製作新 Issue 題庫時可直接複製 `issue-question-template.md`。每題以 `## Q:` 開頭，`type` 支援：
 
 使用相同 `groupId` 可將數題歸為同一知識點；每次測驗只會從該群組隨機抽一題。`variantId` 用來顯示 A-1、A-2 等題型編號。
 

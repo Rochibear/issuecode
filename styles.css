@@ -106,6 +106,34 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, label:has(inp
 }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px rgba(69, 196, 134, 0.7); }
 
+.language-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.language-control.panel {
+  display: grid;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.language-label {
+  color: var(--subtle);
+  font: 700 10px/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.language-card {
+  margin-bottom: 22px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #12151a;
+}
+
 .language-switch {
   display: inline-flex;
   align-items: center;
@@ -117,6 +145,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, label:has(inp
 }
 
 .language-switch button {
+  display: grid;
+  gap: 4px;
   min-height: 26px;
   padding: 0 8px;
   border: 0;
@@ -127,9 +157,33 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, label:has(inp
   cursor: pointer;
 }
 
+.language-switch button strong {
+  font: inherit;
+}
+
+.language-switch button small {
+  color: inherit;
+  font: 500 11px/1.35 Inter, ui-sans-serif, system-ui, "Microsoft JhengHei", sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.75;
+}
+
 .language-switch button.active {
   background: var(--accent);
   color: #1c150b;
+}
+
+.language-switch.large {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 5px;
+}
+
+.language-switch.large button {
+  min-height: 58px;
+  padding: 9px 10px;
 }
 
 .bi-text {
