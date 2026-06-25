@@ -37,6 +37,22 @@ python -m http.server 4173
 
 概念題依關鍵概念群組的覆蓋率自動計分，關鍵字可同時放中文與英文同義詞。提示題最高 8 分，偷看答案的題目為 0 分。
 
+## 內建基本題庫
+
+`questions.js` 目前內建 120 題，來自 `issue-題庫` Markdown 題庫：30 個 issue group，每個 group 各有選擇、填空、是非、概念 4 種變體。練習時同一個 `groupId` 每次只會隨機抽其中一種題型。
+
+如需用新版 Markdown 題庫重新產生內建題庫：
+
+```powershell
+node tools/generate-default-questions.mjs "C:\Users\hgiga\Desktop\issue-題庫" questions.js
+```
+
+產生後建議執行基本檢查：
+
+```powershell
+node -e "global.window={}; require('./questions.js'); console.log(window.DEFAULT_QUESTIONS.length)"
+```
+
 ## 題庫匯入
 
 Markdown 格式可參考 `sample-questions.md`；未來製作新 Issue 題庫時可直接複製 `issue-question-template.md`。如果要交給 AI 產題，先給它 `ai-difficulty-standard.md` 作為難度判定標準。每題以 `## Q:` 開頭，`type` 支援：

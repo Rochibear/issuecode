@@ -829,7 +829,7 @@
               ${difficultyCounts.map((level) => `<div class="stat-card"><strong>${escapeHtml(level.stars)}</strong><span>${renderText(level.label)} · ${level.count}</span></div>`).join("")}
             </div>
             <div class="library-split">
-              ${renderQuestionInventory({ zh: "內建題庫（舊）", en: "Built-in library (base)" }, window.DEFAULT_QUESTIONS, { zh: "系統預設題目", en: "Default questions" })}
+              ${renderQuestionInventory({ zh: "內建基本題庫", en: "Built-in base library" }, window.DEFAULT_QUESTIONS, { zh: "系統預設題目", en: "Default questions" })}
               ${renderQuestionInventory({ zh: "匯入題庫（新）", en: "Imported library (new)" }, state.customQuestions, { zh: "尚未匯入新題目", en: "No imported questions yet" })}
             </div>
             <details class="format-guide">
