@@ -28,6 +28,7 @@ python -m http.server 4173
 - 同一知識點可建立多種題型變體，每次只隨機抽一種
 - 介面支援中文、英文、中英雙語同時呈現
 - 測驗前設定提示與偷看答案次數
+- 測驗前可選難度：一星（初學者）、二星（進階）、三星（資深）
 - 每題計分、總分、作答時間與暱稱紀錄
 - 結果頁並列作答與參考答案，概念題以異色關鍵字顯示命中／缺漏
 - 挑戰紀錄與自訂題庫保存在瀏覽器 `localStorage`
@@ -41,6 +42,14 @@ python -m http.server 4173
 Markdown 格式可參考 `sample-questions.md`；未來製作新 Issue 題庫時可直接複製 `issue-question-template.md`。每題以 `## Q:` 開頭，`type` 支援：
 
 使用相同 `groupId` 可將數題歸為同一知識點；每次測驗只會從該群組隨機抽一題。`variantId` 用來顯示 A-1、A-2 等題型編號。
+
+`difficulty` 用來標示題目難度，建議使用：
+
+- `beginner`：一星，初學者
+- `advanced`：二星，進階
+- `senior`：三星，資深
+
+舊格式 `Easy`、`Medium`、`Hard` 仍可匯入，系統會自動對應為一星、二星、三星。
 
 - `choice`：`options` 以 `|` 分隔，`answer` 為從 0 開始的選項索引。
 - `fill`：`answer` 可用 `|` 提供多個可接受答案。

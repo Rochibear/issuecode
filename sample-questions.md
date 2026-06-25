@@ -9,7 +9,7 @@ variantId: E-5
 type: choice
 category: SQL
 categoryEn: SQL
-difficulty: Easy
+difficulty: beginner
 prompt: 為保留既有物件與權限，修改 HumanlyUtility_5 時應使用哪個指令？
 promptEn: To preserve the existing object and permissions, which command should be used to modify HumanlyUtility_5?
 options: DROP PROCEDURE | ALTER PROCEDURE | DELETE PROCEDURE | UPDATE PROCEDURE
@@ -27,7 +27,7 @@ variantId: C-5
 type: fill
 category: 核心邏輯
 categoryEn: Core logic
-difficulty: Medium
+difficulty: advanced
 prompt: RangeCheck_9.Check() 中，Flag 11 代表哪一類問題？
 promptEn: In RangeCheck_9.Check(), what kind of issue does Flag 11 represent?
 answer: 時間重複 | 已有資料 | 重複申請
@@ -44,7 +44,7 @@ variantId: A-5
 type: concept
 category: 方法論
 categoryEn: Method
-difficulty: Hard
+difficulty: senior
 prompt: 說明如何從畫面錯誤追到真正的 Stored Procedure。
 promptEn: Explain how to trace from a UI symptom to the actual Stored Procedure.
 keywords: F12,Network,請求 | action,RagneChange | Service,VB | SP,Stored Procedure

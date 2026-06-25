@@ -5,7 +5,8 @@
     questions: "issuecode.customQuestions.v1",
     history: "issuecode.history.v1",
     nickname: "issuecode.nickname.v1",
-    language: "issuecode.language.v1"
+    language: "issuecode.language.v1",
+    difficulty: "issuecode.difficulty.v1"
   };
 
   const LANGUAGES = [
@@ -26,6 +27,13 @@
     incorrect: { zh: "錯誤", en: "False" }
   };
 
+  const DIFFICULTY_LEVELS = [
+    { id: "all", legacy: "", stars: "✦", label: { zh: "全部難度", en: "All levels" }, description: { zh: "從所有難度隨機抽題", en: "Sample from every difficulty" } },
+    { id: "beginner", legacy: "Easy", stars: "★", label: { zh: "一星｜初學者", en: "1 star | Beginner" }, description: { zh: "適合熟悉名詞、流程入口與基本判斷", en: "For terms, entry points, and basic judgments" } },
+    { id: "advanced", legacy: "Medium", stars: "★★", label: { zh: "二星｜進階", en: "2 stars | Advanced" }, description: { zh: "適合追資料語意、條件與跨層關係", en: "For data semantics, conditions, and cross-layer links" } },
+    { id: "senior", legacy: "Hard", stars: "★★★", label: { zh: "三星｜資深", en: "3 stars | Senior" }, description: { zh: "適合完整根因、修正策略與驗證回滾", en: "For root cause, fix strategy, validation, and rollback" } }
+  ];
+
   const FALLBACK_TEXT = {
     importedCategory: { zh: "匯入題庫", en: "Imported" },
     importedHint: { zh: "回到題目中的關鍵名詞思考。", en: "Start from the key terms in the question." },
@@ -42,6 +50,7 @@
     hintLimit: 3,
     peekLimit: 1,
     language: normalizeLanguage(localStorage.getItem(STORAGE.language) || "both"),
+    difficulty: normalizeDifficulty(localStorage.getItem(STORAGE.difficulty) || "all"),
     customQuestions: loadJson(STORAGE.questions, []),
     session: null,
     timerId: null
@@ -49,6 +58,56 @@
 
   function normalizeLanguage(value) {
     return LANGUAGES.some((item) => item.id === value) ? value : "both";
+  }
+
+  function normalizeDifficulty(value) {
+    const raw = normalizeText(value);
+    const aliases = {
+      "": "all",
+      all: "all",
+      any: "all",
+      全部: "all",
+      easy: "beginner",
+      beginner: "beginner",
+      junior: "beginner",
+      "1": "beginner",
+      "1 star": "beginner",
+      "one star": "beginner",
+      一星: "beginner",
+      初學者: "beginner",
+      medium: "advanced",
+      advanced: "advanced",
+      intermediate: "advanced",
+      "2": "advanced",
+      "2 star": "advanced",
+      "two star": "advanced",
+      二星: "advanced",
+      進階: "advanced",
+      hard: "senior",
+      senior: "senior",
+      expert: "senior",
+      "3": "senior",
+      "3 star": "senior",
+      "three star": "senior",
+      三星: "senior",
+      三顆星: "senior",
+      資深: "senior"
+    };
+    return aliases[raw] || (DIFFICULTY_LEVELS.some((item) => item.id === value) ? value : "advanced");
+  }
+
+  function difficultyLevel(value) {
+    const id = normalizeDifficulty(value || "advanced");
+    return DIFFICULTY_LEVELS.find((item) => item.id === id && item.id !== "all") || DIFFICULTY_LEVELS[2];
+  }
+
+  function difficultyFilter(value = state.difficulty) {
+    const id = normalizeDifficulty(value);
+    return DIFFICULTY_LEVELS.find((item) => item.id === id) || DIFFICULTY_LEVELS[0];
+  }
+
+  function difficultyMatches(question) {
+    return state.difficulty === "all" || normalizeDifficulty(question.difficulty) === state.difficulty;
   }
 
   function activeLanguage() {
@@ -109,7 +168,10 @@
   }
 
   function selectSessionQuestions() {
-    return shuffle(groupedQuestions().map((group) => shuffle(group.variants)[0]));
+    return shuffle(groupedQuestions()
+      .map((group) => ({ ...group, variants: group.variants.filter(difficultyMatches) }))
+      .filter((group) => group.variants.length)
+      .map((group) => shuffle(group.variants)[0]));
   }
 
   function escapeHtml(value) {
@@ -172,6 +234,45 @@
             </button>`).join("")}
         </div>
       </div>`;
+  }
+
+  function difficultyStats() {
+    const questions = allQuestions();
+    return DIFFICULTY_LEVELS.reduce((result, level) => {
+      const filtered = level.id === "all" ? questions : questions.filter((question) => normalizeDifficulty(question.difficulty) === level.id);
+      result[level.id] = {
+        variants: filtered.length,
+        topics: groupedQuestions(filtered).length
+      };
+      return result;
+    }, {});
+  }
+
+  function renderDifficultySelector() {
+    const stats = difficultyStats();
+    return `
+      <div class="difficulty-card">
+        <div class="selector-head">
+          <div>
+            <span class="language-label">${renderText({ zh: "題型難度", en: "Difficulty" })}</span>
+            <p>${renderText({ zh: "測驗者可先選難度；題庫製作時用 difficulty 直接標示，往後會自動判定。", en: "Choose a level before practice. Future question files use the difficulty field for automatic filtering." })}</p>
+          </div>
+          <span class="count-badge">${escapeHtml(state.difficulty === "all" ? "ALL" : difficultyLevel(state.difficulty).stars)}</span>
+        </div>
+        <div class="difficulty-switch" role="group" aria-label="${escapeHtml(plainText({ zh: "選擇題型難度", en: "Choose question difficulty" }))}">
+          ${DIFFICULTY_LEVELS.map((level) => `
+            <button type="button" class="${state.difficulty === level.id ? "active" : ""}" data-difficulty="${level.id}" aria-pressed="${state.difficulty === level.id}">
+              <strong>${level.id === "all" ? "ALL" : escapeHtml(level.stars)}</strong>
+              <span>${renderText(level.label)}</span>
+              <small>${renderText(level.description)} · ${stats[level.id].topics} topics / ${stats[level.id].variants} variants</small>
+            </button>`).join("")}
+        </div>
+      </div>`;
+  }
+
+  function renderDifficultyBadge(question) {
+    const level = difficultyLevel(question.difficulty);
+    return `<span class="difficulty ${level.id}"><strong>${escapeHtml(level.stars)}</strong> ${renderText(level.label)}</span>`;
   }
 
   function syncLanguageSwitches() {
@@ -253,6 +354,8 @@
   function renderHome() {
     const questions = allQuestions();
     const groups = groupedQuestions(questions);
+    const eligibleQuestions = state.difficulty === "all" ? questions : questions.filter(difficultyMatches);
+    const eligibleGroups = groupedQuestions(eligibleQuestions);
     const history = loadJson(STORAGE.history, []);
     const savedName = localStorage.getItem(STORAGE.nickname) || "";
     app.innerHTML = `
@@ -281,6 +384,8 @@
               ${renderLanguageSwitch("panel")}
             </div>
 
+            ${renderDifficultySelector()}
+
             <div class="form-group">
               <label class="form-label" for="nickname">${renderText({ zh: "練習暱稱", en: "Nickname" })}</label>
               <input id="nickname" class="text-input" maxlength="20" autocomplete="nickname" placeholder="${escapeHtml(plainText({ zh: "例如：Dana", en: "e.g. Dana" }))}" value="${escapeHtml(savedName)}" />
@@ -292,7 +397,7 @@
             </div>
 
             <div class="start-row">
-              <div class="score-note"><strong>${renderText({ zh: "隨機規則", en: "Random rule" })}</strong><br>${renderText({ zh: `每個知識點只抽一種題型，本次共 ${groups.length} 題。`, en: `One variant per topic. This run has ${groups.length} questions.` })}</div>
+              <div class="score-note"><strong>${renderText({ zh: "隨機規則", en: "Random rule" })}</strong><br>${renderText({ zh: `每個知識點只抽一種符合難度的題型，本次會有 ${eligibleGroups.length} 題。`, en: `One matching variant per topic. This run will have ${eligibleGroups.length} questions.` })}</div>
               <button class="primary-btn" data-action="start">${renderText({ zh: "開始練習 →", en: "Start practice →" })}</button>
             </div>
           </section>
@@ -324,9 +429,15 @@
       return;
     }
     localStorage.setItem(STORAGE.nickname, nickname);
+    localStorage.setItem(STORAGE.difficulty, state.difficulty);
     const questions = selectSessionQuestions();
+    if (!questions.length) {
+      toast({ zh: "目前題庫沒有符合這個難度的題目，請改選其他難度或匯入題庫。", en: "No questions match this difficulty. Choose another level or import more questions." }, "error");
+      return;
+    }
     state.session = {
       nickname,
+      difficulty: state.difficulty,
       questions,
       index: 0,
       answers: questions.map(() => ({ value: null, hintsUsed: 0, peeked: false, score: null, correct: null })),
@@ -388,7 +499,7 @@
 
           <article class="question-card">
             <div class="question-meta">
-              <span class="difficulty ${String(question.difficulty || "Medium").toLowerCase()}">${escapeHtml(question.difficulty || "Medium")}</span>
+              ${renderDifficultyBadge(question)}
               <span class="question-type">${renderText(TYPE_LABELS[question.type])}</span>
               <span class="question-type">${renderText(question.category || FALLBACK_TEXT.importedCategory)}</span>
               <span class="question-number">${escapeHtml(question.variantId || `ISSUE-${String(session.index + 1).padStart(3, "0")}`)}</span>
@@ -603,7 +714,8 @@
       hintsUsed: session.hintLimit - session.hintsRemaining,
       peeksUsed: session.peekLimit - session.peeksRemaining,
       completedAt: new Date().toISOString(),
-      questionCount: session.questions.length
+      questionCount: session.questions.length,
+      difficulty: session.difficulty || "all"
     };
     const history = loadJson(STORAGE.history, []);
     history.unshift(record);
@@ -636,6 +748,7 @@
             <p>${escapeHtml(record.nickname)}，${renderText({ zh: `本次完成 ${record.questionCount} 題，${correctCount} 題達到通過標準。概念題以關鍵概念覆蓋率計分。`, en: `you completed ${record.questionCount} questions. ${correctCount} met the passing threshold. Concept questions are scored by keyword coverage.` })}</p>
             <div class="result-meta">
               <span class="meta-pill">TIME ${formatTime(record.elapsed)}</span>
+              <span class="meta-pill">LEVEL ${renderText(difficultyFilter(record.difficulty).label)}</span>
               <span class="meta-pill">HINT ${record.hintsUsed}</span>
               <span class="meta-pill">PEEK ${record.peeksUsed}</span>
               <span class="meta-pill">${formatDate(record.completedAt)}</span>
@@ -681,8 +794,8 @@
         </div>
         ${history.length ? `
           <div class="table-wrap"><table class="data-table">
-            <thead><tr><th>${renderText({ zh: "暱稱", en: "Nickname" })}</th><th>${renderText({ zh: "分數", en: "Score" })}</th><th>${renderText({ zh: "題數", en: "Questions" })}</th><th>${renderText({ zh: "時間", en: "Time" })}</th><th>${renderText({ zh: "提示 / 偷看", en: "Hint / Peek" })}</th><th>${renderText({ zh: "完成時間", en: "Completed" })}</th></tr></thead>
-            <tbody>${history.map((record) => `<tr><td><strong>${escapeHtml(record.nickname)}</strong></td><td>${record.percentage}%</td><td>${record.questionCount}</td><td>${formatTime(record.elapsed)}</td><td>${record.hintsUsed} / ${record.peeksUsed}</td><td>${formatDate(record.completedAt)}</td></tr>`).join("")}</tbody>
+            <thead><tr><th>${renderText({ zh: "暱稱", en: "Nickname" })}</th><th>${renderText({ zh: "分數", en: "Score" })}</th><th>${renderText({ zh: "難度", en: "Level" })}</th><th>${renderText({ zh: "題數", en: "Questions" })}</th><th>${renderText({ zh: "時間", en: "Time" })}</th><th>${renderText({ zh: "提示 / 偷看", en: "Hint / Peek" })}</th><th>${renderText({ zh: "完成時間", en: "Completed" })}</th></tr></thead>
+            <tbody>${history.map((record) => `<tr><td><strong>${escapeHtml(record.nickname)}</strong></td><td>${record.percentage}%</td><td>${renderText(difficultyFilter(record.difficulty || "all").label)}</td><td>${record.questionCount}</td><td>${formatTime(record.elapsed)}</td><td>${record.hintsUsed} / ${record.peeksUsed}</td><td>${formatDate(record.completedAt)}</td></tr>`).join("")}</tbody>
           </table></div>` : `
           <div class="empty-state"><strong>${renderText({ zh: "還沒有紀錄", en: "No records yet" })}</strong><p>${renderText({ zh: "完成一次練習後，分數、時間與暱稱會顯示在這裡。", en: "After a run, score, time, and nickname will appear here." })}</p><button class="primary-btn" data-action="home">${renderText({ zh: "回首頁練習", en: "Back to practice" })}</button></div>`}
       </section>`;
@@ -695,6 +808,10 @@
       result[type] = questions.filter((question) => question.type === type).length;
       return result;
     }, {});
+    const difficultyCounts = DIFFICULTY_LEVELS.filter((level) => level.id !== "all").map((level) => ({
+      ...level,
+      count: questions.filter((question) => normalizeDifficulty(question.difficulty) === level.id).length
+    }));
     app.innerHTML = `
       <section class="page">
         <div class="section-heading">
@@ -706,6 +823,9 @@
             <div class="panel-header"><div><h2>${renderText({ zh: "題型變體", en: "Question variants" })}</h2><p>${renderText({ zh: `${questions.length} 個題型變體，分屬 ${groups.length} 個知識點；每次每組只抽一題。`, en: `${questions.length} variants across ${groups.length} topics; each run samples one variant per topic.` })}</p></div><span class="count-badge">${groups.length} TOPICS</span></div>
             <div class="type-stats">
               ${Object.entries(TYPE_LABELS).map(([type, label]) => `<div class="stat-card"><strong>${counts[type]}</strong><span>${renderText(label)}</span></div>`).join("")}
+            </div>
+            <div class="type-stats difficulty-stats">
+              ${difficultyCounts.map((level) => `<div class="stat-card"><strong>${escapeHtml(level.stars)}</strong><span>${renderText(level.label)} · ${level.count}</span></div>`).join("")}
             </div>
             <div class="library-split">
               ${renderQuestionInventory({ zh: "內建題庫（舊）", en: "Built-in library (base)" }, window.DEFAULT_QUESTIONS, { zh: "系統預設題目", en: "Default questions" })}
@@ -720,7 +840,7 @@ variantId: E-5
 type: choice
 category: SQL
 categoryEn: SQL
-difficulty: Medium
+difficulty: advanced
 prompt: 哪一種改法最小、最容易驗證？
 promptEn: Which change is smallest and easiest to verify?
 options: DROP 重建 | 用 UNION 補 item=0 | 改全部查詢 | 只改畫面
@@ -758,7 +878,10 @@ explanationEn: Add only the missing source to keep risk low.</pre>
           const first = group.variants[0];
           return `<div class="source-item">
             <div><strong>${escapeHtml(group.id)} · ${renderText(first.groupTitle || first.title)}</strong><small>${group.variants.length} variants</small></div>
-            <div class="variant-list">${group.variants.map((question) => `<span>${escapeHtml(question.variantId || question.id)} · ${renderText(TYPE_LABELS[question.type])}</span>`).join("")}</div>
+            <div class="variant-list">${group.variants.map((question) => {
+              const level = difficultyLevel(question.difficulty);
+              return `<span>${escapeHtml(question.variantId || question.id)} · ${escapeHtml(level.stars)} · ${renderText(TYPE_LABELS[question.type])}</span>`;
+            }).join("")}</div>
           </div>`;
         }).join("")}</div>` : `<p class="source-empty">${renderText(emptyText)}</p>`}
       </div>`;
@@ -813,7 +936,7 @@ explanationEn: Add only the missing source to keep risk low.</pre>
         title: bilingual(title, fields.titleen),
         prompt: bilingual(fields.prompt || title, fields.prompten || fields.titleen),
         category: bilingual(fields.category || textOf(FALLBACK_TEXT.importedCategory, "zh"), fields.categoryen),
-        difficulty: fields.difficulty || "Medium",
+        difficulty: normalizeDifficulty(fields.difficulty || "advanced"),
         hints: buildBilingualList(fields.hint, fields.hinten),
         explanation: bilingual(fields.explanation || textOf(FALLBACK_TEXT.importedExplanation, "zh"), fields.explanationen)
       };
@@ -849,7 +972,7 @@ explanationEn: Add only the missing source to keep risk low.</pre>
     if (question.type === "choice") question.answer = Number(question.answer);
     if (question.type === "concept") question.keywords = question.keywords.map((group) => Array.isArray(group) ? group : [group]);
     question.category ||= FALLBACK_TEXT.importedCategory;
-    question.difficulty = ["Easy", "Medium", "Hard"].includes(question.difficulty) ? question.difficulty : "Medium";
+    question.difficulty = normalizeDifficulty(question.difficulty || "advanced");
     question.hints = Array.isArray(question.hints) && question.hints.length ? question.hints : [FALLBACK_TEXT.importedHint];
     question.explanation ||= FALLBACK_TEXT.importedExplanation;
     return question;
@@ -882,9 +1005,21 @@ explanationEn: Add only the missing source to keep risk low.</pre>
   document.addEventListener("click", (event) => {
     const languageButton = event.target.closest("[data-language]");
     if (languageButton) {
+      const nickname = document.querySelector("#nickname")?.value || "";
       state.language = normalizeLanguage(languageButton.dataset.language);
       localStorage.setItem(STORAGE.language, state.language);
       render();
+      if (state.view === "home" && document.querySelector("#nickname")) document.querySelector("#nickname").value = nickname;
+      return;
+    }
+
+    const difficultyButton = event.target.closest("[data-difficulty]");
+    if (difficultyButton) {
+      const nickname = document.querySelector("#nickname")?.value || "";
+      state.difficulty = normalizeDifficulty(difficultyButton.dataset.difficulty);
+      localStorage.setItem(STORAGE.difficulty, state.difficulty);
+      render();
+      if (state.view === "home" && document.querySelector("#nickname")) document.querySelector("#nickname").value = nickname;
       return;
     }
 

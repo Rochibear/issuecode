@@ -6,7 +6,11 @@
 2. 每一個「知識點」使用同一個 `groupId`，例如 `ISSUE001`。
 3. 同一個知識點可建立 4 種題型：選擇、填空、是非、概念。
 4. 匯入後，每次練習會從同一個 `groupId` 只隨機抽一題。
-5. 如果只要中文，可以刪掉 `titleEn`、`promptEn`、`optionsEn`、`answerEn`、`hintEn`、`keywordsEn`、`modelAnswerEn`、`explanationEn`。
+5. `difficulty` 請優先使用 `beginner`、`advanced`、`senior`：
+   - `beginner`：一星，初學者
+   - `advanced`：二星，進階
+   - `senior`：三星，資深
+6. 如果只要中文，可以刪掉 `titleEn`、`promptEn`、`optionsEn`、`answerEn`、`hintEn`、`keywordsEn`、`modelAnswerEn`、`explanationEn`。
 
 ---
 
@@ -17,7 +21,7 @@ variantId: ISSUE001-1
 type: choice
 category: 問題追蹤
 categoryEn: Issue tracing
-difficulty: Easy
+difficulty: beginner
 prompt: 當畫面或流程出現異常時，第一步最適合先取得哪一種證據？
 promptEn: When a screen or flow behaves unexpectedly, which evidence should be captured first?
 options: 直接修改資料 | 查看瀏覽器 Network 請求與回應 | 重啟服務 | 先改設定值
@@ -35,7 +39,7 @@ variantId: ISSUE001-2
 type: fill
 category: 問題追蹤
 categoryEn: Issue tracing
-difficulty: Easy
+difficulty: beginner
 prompt: 這次追查中，最適合拿來跨層搜尋的關鍵名稱是 ________。
 promptEn: In this investigation, the key name best used for cross-layer searching is ________.
 answer: TODO_ACTION_OR_SP_NAME | TODO_API_NAME
@@ -52,7 +56,7 @@ variantId: ISSUE001-3
 type: boolean
 category: 根因判斷
 categoryEn: Root-cause judgment
-difficulty: Medium
+difficulty: advanced
 prompt: 只要畫面顯示錯誤，就代表根因一定在前端程式。
 promptEn: If the screen shows an error, the root cause must be in frontend code.
 answer: false
@@ -68,7 +72,7 @@ variantId: ISSUE001-4
 type: concept
 category: 根因判斷
 categoryEn: Root-cause judgment
-difficulty: Hard
+difficulty: senior
 prompt: 請用自己的話說明：你會如何從畫面現象追到真正根因，最後如何驗證修正有效。
 promptEn: Explain in your own words how you would trace from the UI symptom to the real root cause and verify the fix.
 keywords: 畫面現象,錯誤訊息,UI | Network,request,response | action,API,Service | DB,Stored Procedure,SP | 根因,資料條件,設定值 | 驗證,UAT,回歸測試,回滾
