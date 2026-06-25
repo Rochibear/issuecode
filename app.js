@@ -482,6 +482,7 @@
     const progress = (session.index / session.questions.length) * 100;
     const hintHtml = answer.hintsUsed ? question.hints.slice(0, answer.hintsUsed).map((hint) => renderText(hint)).join("<br>") : "";
     const peekHtml = answer.peeked ? renderAnswerLabel(question) : "";
+    const mapMode = session.questions.length > 18 ? "compact" : "standard";
 
     app.innerHTML = `
       <section class="quiz-page">
@@ -493,7 +494,7 @@
         <div class="quiz-layout">
           <aside class="quiz-sidebar">
             <div class="sidebar-head">Question map</div>
-            <div class="question-map">${session.questions.map((item, index) => `<button class="question-dot ${index === session.index ? "current" : ""} ${session.answers[index].score !== null ? "done" : ""}" aria-label="${escapeHtml(plainText({ zh: `第 ${index + 1} 題`, en: `Question ${index + 1}` }))}">${escapeHtml(item.groupId || String(index + 1).padStart(2, "0"))}</button>`).join("")}</div>
+            <div class="question-map ${mapMode}">${session.questions.map((item, index) => `<button class="question-dot ${index === session.index ? "current" : ""} ${session.answers[index].score !== null ? "done" : ""}" aria-label="${escapeHtml(plainText({ zh: `第 ${index + 1} 題`, en: `Question ${index + 1}` }))}"><span>${escapeHtml(item.groupId || String(index + 1).padStart(2, "0"))}</span><small>${escapeHtml(item.variantId || item.id || "")}</small></button>`).join("")}</div>
             <div class="sidebar-summary">${renderText({ zh: "每組只出一種題型；同一知識點不會在同次練習重複出現。", en: "Only one variant is selected per topic in a single run." })}</div>
           </aside>
 

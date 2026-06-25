@@ -10,7 +10,8 @@
    - `beginner`：一星，初學者
    - `advanced`：二星，進階
    - `senior`：三星，資深
-6. 如果只要中文，可以刪掉 `titleEn`、`promptEn`、`optionsEn`、`answerEn`、`hintEn`、`keywordsEn`、`modelAnswerEn`、`explanationEn`。
+6. 如果要交給 AI 產題，先提供 `ai-difficulty-standard.md`，要求 AI 依該標準設定 difficulty。
+7. 如果只要中文，可以刪掉 `titleEn`、`promptEn`、`optionsEn`、`answerEn`、`hintEn`、`keywordsEn`、`modelAnswerEn`、`explanationEn`。
 
 ---
 
